@@ -51,7 +51,17 @@ class _MindAtelierChatTabState extends State<MindAtelierChatTab> {
       if (status.isDenied) return;
 
       bool available = await _speech.initialize(
-        onStatus: (val) => debugPrint('onStatus: $val'),
+        onStatus: (val) {
+          debugPrint('onStatus: $val');
+          if (val == 'notListening' || val == 'done') {
+            if (mounted && _isListening) {
+              setState(() => _isListening = false);
+              if (_text.isNotEmpty) {
+                Future.delayed(const Duration(milliseconds: 500), () => _sendMessage(_text));
+              }
+            }
+          }
+        },
         onError: (val) => debugPrint('onError: $val'),
       );
       if (available) {
@@ -70,16 +80,8 @@ class _MindAtelierChatTabState extends State<MindAtelierChatTab> {
         );
       }
     } else {
-      setState(() => _isListening = false);
       _speech.stop();
-      if (_text.isNotEmpty) {
-        // Küçük bir gecikme ile son kelimelerin yakalanmasını sağla
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (_text.isNotEmpty) {
-            _sendMessage(_text);
-          }
-        });
-      }
+      setState(() => _isListening = false);
     }
   }
 

@@ -233,7 +233,17 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
       if (!status.isGranted) return;
 
       bool available = await _speech.initialize(
-        onStatus: (val) => debugPrint('onStatus: $val'),
+        onStatus: (val) {
+          debugPrint('onStatus: $val');
+          if (val == 'notListening' || val == 'done') {
+            if (mounted && _isListening) {
+              setState(() => _isListening = false);
+              if (_dreamText.isNotEmpty) {
+                Future.delayed(const Duration(milliseconds: 500), () => _runDreamAnalysis());
+              }
+            }
+          }
+        },
         onError: (val) => debugPrint('onError: $val'),
       );
       if (available) {
@@ -252,14 +262,8 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
         );
       }
     } else {
-      setState(() => _isListening = false);
       _speech.stop();
-      if (_dreamText.isNotEmpty) {
-        // Küçük bir gecikme ile son kelimelerin yakalanmasını sağlama
-        Future.delayed(const Duration(milliseconds: 500), () {
-          _runDreamAnalysis();
-        });
-      }
+      setState(() => _isListening = false);
     }
   }
 

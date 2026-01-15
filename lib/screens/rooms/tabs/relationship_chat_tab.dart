@@ -65,7 +65,17 @@ class _RelationshipChatTabState extends State<RelationshipChatTab>
       if (status.isDenied) return;
 
       bool available = await _speech.initialize(
-        onStatus: (val) => debugPrint('onStatus: $val'),
+        onStatus: (val) {
+          debugPrint('onStatus: $val');
+          if (val == 'notListening' || val == 'done') {
+            if (mounted && _isListening) {
+              setState(() => _isListening = false);
+              if (_messageController.text.isNotEmpty) {
+                Future.delayed(const Duration(milliseconds: 500), () => _sendMessage());
+              }
+            }
+          }
+        },
         onError: (val) => debugPrint('onError: $val'),
       );
       if (available) {
@@ -84,16 +94,8 @@ class _RelationshipChatTabState extends State<RelationshipChatTab>
         );
       }
     } else {
-      setState(() => _isListening = false);
       _speech.stop();
-      if (_messageController.text.isNotEmpty) {
-        // Küçük bir gecikme ile son kelimelerin yakalanmasını sağla
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (_messageController.text.isNotEmpty) {
-            _sendMessage();
-          }
-        });
-      }
+      setState(() => _isListening = false);
     }
   }
 
