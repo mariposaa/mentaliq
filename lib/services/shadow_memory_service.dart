@@ -72,7 +72,7 @@ Aşağıdaki kullanıcı mesajını analiz et. Amacın iki şeyi güncel tutmakt
   static void initialize(String apiKey) {
     try {
       _model = GenerativeModel(
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.0-flash-exp',
         apiKey: apiKey,
         generationConfig: GenerationConfig(
           temperature: 0.3,

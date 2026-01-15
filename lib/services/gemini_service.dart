@@ -140,13 +140,13 @@ Tüm kartların ortak hafızası, kullanıcının Master DNA'sının koruyucusu 
   static Future<void> initialize(String apiKey) async {
     try {
       _model = GenerativeModel(
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash-exp',
         apiKey: apiKey,
         generationConfig: GenerationConfig(
-          temperature: 0.8,
+          temperature: 0.7,
           topP: 0.95,
           topK: 40,
-          maxOutputTokens: 1024, // Yeterli alan, prompt ile kontrol ediyoruz
+          maxOutputTokens: 4096,
         ),
       );
 

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/style_item.dart';
 import '../../../services/style_service.dart';
@@ -83,11 +84,43 @@ class _StyleClosetTabState extends State<StyleClosetTab> {
             ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _pickAndUploadImage,
-        backgroundColor: AppTheme.terracotta,
-        icon: const Icon(Icons.add_a_photo_rounded, color: Colors.white),
-        label: const Text('Yeni Ekle', style: TextStyle(color: Colors.white)),
+      floatingActionButton: GestureDetector(
+        onTap: _pickAndUploadImage,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [AppTheme.terracotta, Color(0xFFE59A85)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.terracotta.withOpacity(0.4),
+                blurRadius: 20,
+                spreadRadius: 2,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.add_a_photo_rounded, color: Colors.white, size: 22),
+              const SizedBox(width: 10),
+              Text(
+                'Yeni Ekle',
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:permission_handler/permission_handler.dart';
 import 'package:intl/intl.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -223,7 +225,7 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
     super.dispose();
   }
 
-  // --- Rüya Tabiri (STT Sync) ---
+  // --- Rüya Tabiri (STT Sync - Bas-Durdur) ---
 
   void _listen() async {
     if (!_isListening) {
@@ -240,6 +242,7 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
           _dreamText = '';
         });
         _speech.listen(
+          localeId: 'tr_TR',
           onResult: (val) => setState(() {
             _dreamText = val.recognizedWords;
             if (val.hasConfidenceRating && val.confidence > 0) {
@@ -252,7 +255,10 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
       setState(() => _isListening = false);
       _speech.stop();
       if (_dreamText.isNotEmpty) {
-        _runDreamAnalysis();
+        // Küçük bir gecikme ile son kelimelerin yakalanmasını sağlama
+        Future.delayed(const Duration(milliseconds: 500), () {
+          _runDreamAnalysis();
+        });
       }
     }
   }

@@ -547,8 +547,8 @@ class _HomeScreenState extends State<HomeScreen> {
       return GestureDetector(
         onTap: () => _openChat(context, category),
         child: Container(
-          height: 120,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          constraints: const BoxConstraints(minHeight: 110),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
             color: AppTheme.warmCream,
             borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
@@ -581,24 +581,23 @@ class _HomeScreenState extends State<HomeScreen> {
                       name,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w600,
-                            fontSize: 14,
+                            fontSize: 13,
                           ),
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     Row(
                       children: [
                         Text(
-                          'Keşfet',
+                          'Başla',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 11,
                             fontWeight: FontWeight.w500,
                             color: AppTheme.terracotta,
                           ),
                         ),
                         const SizedBox(width: 4),
-                        Icon(Icons.arrow_forward_rounded, size: 14, color: AppTheme.terracotta),
+                        Icon(Icons.arrow_forward_rounded, size: 12, color: AppTheme.terracotta),
                       ],
                     ),
                   ],
@@ -615,8 +614,8 @@ class _HomeScreenState extends State<HomeScreen> {
       return GestureDetector(
         onTap: () => _openChat(context, category),
         child: Container(
-          height: 120,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          constraints: const BoxConstraints(minHeight: 110),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
             color: AppTheme.warmCream,
             borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
@@ -683,8 +682,8 @@ class _HomeScreenState extends State<HomeScreen> {
       return GestureDetector(
         onTap: () => _openChat(context, category),
         child: Container(
-          height: 120,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          constraints: const BoxConstraints(minHeight: 110),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
             color: AppTheme.warmCream,
             borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
@@ -717,10 +716,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       name,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.bold,
-                            fontSize: 14,
+                            fontSize: 13,
                           ),
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 6),
                     Row(
@@ -751,8 +749,8 @@ class _HomeScreenState extends State<HomeScreen> {
       return GestureDetector(
         onTap: () => _openChat(context, category),
         child: Container(
-          height: 120, 
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          constraints: const BoxConstraints(minHeight: 110), 
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
             color: AppTheme.warmCream,
             borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
@@ -785,11 +783,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       name,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.bold,
-                            fontSize: 14,
+                            fontSize: 13,
                             color: AppTheme.forestCharcoal,
                           ),
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 6),
                     Row(
@@ -820,8 +817,8 @@ class _HomeScreenState extends State<HomeScreen> {
       return GestureDetector(
         onTap: () => _openChat(context, category),
         child: Container(
-          height: 120,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          constraints: const BoxConstraints(minHeight: 110),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
             color: AppTheme.warmCream,
             borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
@@ -848,10 +845,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       name,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.bold,
-                            fontSize: 14,
+                            fontSize: 13,
                           ),
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 6),
                     Row(
@@ -882,8 +878,8 @@ class _HomeScreenState extends State<HomeScreen> {
       return GestureDetector(
         onTap: () => _openChat(context, category),
         child: Container(
-          height: 120,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          constraints: const BoxConstraints(minHeight: 110),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
             color: AppTheme.warmCream,
             borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
@@ -916,11 +912,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       name,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.bold,
-                            fontSize: 14,
+                            fontSize: 13,
                             color: AppTheme.forestCharcoal,
                           ),
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 6),
                     Row(
@@ -950,8 +945,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: () => _openChat(context, category),
       child: Container(
-        height: 120, // Hepsi 120 oldu
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        constraints: const BoxConstraints(minHeight: 110),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
           color: AppTheme.warmCream,
           borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
@@ -982,10 +977,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     name,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                          fontSize: 13,
                         ),
                     maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 6),
                   Row(
@@ -1012,8 +1006,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildDailyInsight() {
-    return SizedBox(
-      height: 220, // Increased height to prevent overflow with detailed text
+    return Container(
+      constraints: const BoxConstraints(minHeight: 220, maxHeight: 250),
       child: PageView.builder(
         controller: _pageController,
         onPageChanged: (index) {
@@ -1081,13 +1075,16 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            data['subtitle'],
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.white.withOpacity(0.9),
-                  fontSize: 14,
-                  height: 1.4,
-                ),
+          Flexible(
+            child: Text(
+              data['subtitle'],
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.white.withOpacity(0.9),
+                    fontSize: 13,
+                    height: 1.3,
+                  ),
+              overflow: TextOverflow.visible,
+            ),
           ),
         ],
       ),

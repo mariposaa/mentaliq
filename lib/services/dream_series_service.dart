@@ -67,7 +67,7 @@ KARAKTER DERİNLİĞİ: Kullanıcının DNA'sındaki değerleri ve korkuları ({
 
   static void initialize(String apiKey) {
     _model = GenerativeModel(
-      model: 'gemini-2.0-flash',
+      model: 'gemini-1.5-flash',
       apiKey: apiKey,
       systemInstruction: Content.system(_systemInstruction),
       generationConfig: GenerationConfig(

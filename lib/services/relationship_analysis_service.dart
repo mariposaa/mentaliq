@@ -49,7 +49,7 @@ Cevabı tam olarak şu anahtarlarla (keys) üret:
   static void initialize(String apiKey) {
     try {
       _model = GenerativeModel(
-        model: 'gemini-2.0-flash',
+        model: 'gemini-1.5-pro',
         apiKey: apiKey,
         generationConfig: GenerationConfig(
           temperature: 0.4, // Düşük - tutarlı JSON çıktısı

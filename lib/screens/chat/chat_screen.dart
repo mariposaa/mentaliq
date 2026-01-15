@@ -3,6 +3,8 @@ import '../../config/app_theme.dart';
 import '../../config/app_constants.dart';
 import '../../services/gemini_service.dart';
 import '../../services/token_service.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:permission_handler/permission_handler.dart';
 
 
 class ChatScreen extends StatefulWidget {
@@ -22,10 +24,62 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isLoading = false;
   int _tokenBalance = 100;
 
+  // Speech to Text
+  final stt.SpeechToText _speech = stt.SpeechToText();
+  bool _isListening = false;
+  String _speechText = '';
+
   @override
   void initState() {
     super.initState();
     _initializeChat();
+    _initSpeech();
+  }
+
+  void _initSpeech() async {
+    try {
+      await _speech.initialize();
+    } catch (e) {
+      debugPrint('Speech init error: $e');
+    }
+  }
+
+  void _listen() async {
+    if (!_isListening) {
+      final status = await Permission.microphone.request();
+      if (status.isDenied) return;
+
+      bool available = await _speech.initialize(
+        onStatus: (val) => debugPrint('onStatus: $val'),
+        onError: (val) => debugPrint('onError: $val'),
+      );
+      if (available) {
+        setState(() {
+          _isListening = true;
+          _speechText = '';
+        });
+        _speech.listen(
+          localeId: 'tr_TR',
+          onResult: (val) => setState(() {
+            _speechText = val.recognizedWords;
+            if (val.recognizedWords.isNotEmpty) {
+              _messageController.text = val.recognizedWords;
+            }
+          }),
+        );
+      }
+    } else {
+      setState(() => _isListening = false);
+      _speech.stop();
+      if (_messageController.text.isNotEmpty) {
+        // Küçük bir gecikme ile son kelimelerin yakalanmasını sağla
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (_messageController.text.isNotEmpty) {
+            _sendMessage();
+          }
+        });
+      }
+    }
   }
 
   Future<void> _initializeChat() async {
@@ -283,7 +337,31 @@ class _ChatScreenState extends State<ChatScreen> {
                       onSubmitted: (_) => _sendMessage(),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: _listen,
+                    child: Container(
+                      height: 52,
+                      width: 52,
+                      decoration: BoxDecoration(
+                        color: _isListening ? AppTheme.terracotta : AppTheme.sageGreen.withOpacity(0.12),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: (_isListening ? AppTheme.terracotta : AppTheme.sageGreen).withOpacity(0.2),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        _isListening ? Icons.stop_rounded : Icons.mic_rounded,
+                        color: _isListening ? Colors.white : AppTheme.sageGreen,
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   GestureDetector(
                     onTap: _sendMessage,
                     child: Container(

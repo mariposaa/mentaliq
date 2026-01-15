@@ -165,7 +165,7 @@ class AppTheme {
       ),
       
       // Cards - Soft, floating
-      cardTheme: CardThemeData(
+      cardTheme: CardTheme(
         color: warmCream,
         elevation: 0,
         shape: RoundedRectangleBorder(

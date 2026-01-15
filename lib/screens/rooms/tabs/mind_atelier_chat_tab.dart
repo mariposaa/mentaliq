@@ -55,8 +55,12 @@ class _MindAtelierChatTabState extends State<MindAtelierChatTab> {
         onError: (val) => debugPrint('onError: $val'),
       );
       if (available) {
-        setState(() => _isListening = true);
+        setState(() {
+          _isListening = true;
+          _text = '';
+        });
         _speech.listen(
+          localeId: 'tr_TR',
           onResult: (val) => setState(() {
             _text = val.recognizedWords;
             if (val.hasConfidenceRating && val.confidence > 0) {
@@ -69,7 +73,12 @@ class _MindAtelierChatTabState extends State<MindAtelierChatTab> {
       setState(() => _isListening = false);
       _speech.stop();
       if (_text.isNotEmpty) {
-        _sendMessage(_text);
+        // Küçük bir gecikme ile son kelimelerin yakalanmasını sağla
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (_text.isNotEmpty) {
+            _sendMessage(_text);
+          }
+        });
       }
     }
   }
