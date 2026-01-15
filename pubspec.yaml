@@ -1,0 +1,104 @@
+name: mentaliq
+description: "Mentaliq - Kişisel Gelişim ve Yapay Zeka Destekli Danışmanlık Uygulaması"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  
+  # Firebase
+  firebase_core: ^3.8.0
+  firebase_auth: ^5.3.3
+  cloud_firestore: ^5.5.0
+  firebase_storage: ^12.3.6
+  
+  # AI - Gemini
+  google_generative_ai: ^0.4.6
+  
+  # Device Recognition (for silent auth)
+  device_info_plus: ^11.1.0
+  
+  # State Management
+  provider: ^6.1.2
+  
+  # UI & Styling
+  google_fonts: ^6.2.1
+  cached_network_image: ^3.4.1
+  shimmer: ^3.0.0
+  flutter_svg: ^2.0.10
+  lottie: ^3.1.3
+  fl_chart: ^0.69.0
+  
+  # Utils
+  shared_preferences: ^2.3.3
+  intl: ^0.19.0
+  flutter_dotenv: ^5.2.1
+  uuid: ^4.5.1
+  percent_indicator: ^4.2.3
+  share_plus: ^10.1.0
+  path_provider: ^2.1.4
+  
+  # Image Picker
+  image_picker: ^1.0.7
+  image_picker_for_web: ^3.0.5
+  record: ^6.1.2
+  speech_to_text: ^7.3.0
+  permission_handler: ^12.0.1
+  audioplayers: ^6.4.0
+  http: ^1.6.0
+  geolocator: ^12.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^4.0.0
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter packages.
+flutter:
+
+  # The following line ensures that the Material Icons font is
+  # included with your application, so that you can use the icons in
+  # the material Icons class.
+  uses-material-design: true
+
+  assets:
+    - .env
+    - assets/images/
+    - assets/animations/
+
+  # An image asset can refer to one or more resolution-specific "variants", see
+  # https://flutter.dev/to/resolution-aware-images
+
+  # For details regarding adding assets from package dependencies, see
+  # https://flutter.dev/to/asset-from-package
+
+  # To add custom fonts to your application, add a fonts section here,
+  # in this "flutter" section. Each entry in this list should have a
+  # "family" key with the font family name, and a "fonts" key with a
+  # list giving the asset and other descriptors for the font. For
+  # example:
+  # fonts:
+  #   - family: Schyler
+  #     fonts:
+  #       - asset: fonts/Schyler-Regular.ttf
+  #       - asset: fonts/Schyler-Italic.ttf
+  #         style: italic
+  #   - family: Trajan Pro
+  #     fonts:
+  #       - asset: fonts/TrajanPro.ttf
+  #       - asset: fonts/TrajanPro_Bold.ttf
+  #         weight: 700
+  #
+  # For details regarding fonts from package dependencies,
+  # see https://flutter.dev/to/font-from-package

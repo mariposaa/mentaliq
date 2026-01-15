@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1092243595874",
+    "project_id": "mentaliq-app",
+    "storage_bucket": "mentaliq-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1092243595874:android:7d44abcadfc6a0c9a8673b",
+        "android_client_info": {
+          "package_name": "com.mentaliq.mentaliq"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDl4dnuukuJvSaSlL0RS9jby5rs5VshUZ0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
