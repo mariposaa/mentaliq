@@ -165,7 +165,7 @@ class AppTheme {
       ),
       
       // Cards - Soft, floating
-      cardTheme: CardTheme(
+      cardTheme: ThemeData.light().cardTheme.copyWith(
         color: warmCream,
         elevation: 0,
         shape: RoundedRectangleBorder(
