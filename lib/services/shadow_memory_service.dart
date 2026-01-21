@@ -18,9 +18,10 @@ class ShadowMemoryService {
   // ============================================================
   static const String _shadowMemoryPrompt = '''
 ### GÖREV:
-Aşağıdaki kullanıcı mesajını analiz et. Amacın iki şeyi güncel tutmaktır:
+Aşağıdaki kullanıcı mesajını analiz et. Amacın üç şeyi güncel tutmaktır:
 1. KULLANICI hakkındaki Psikolojik Master DNA'yı
 2. PARTNER hakkındaki bilgileri (ilişki kategorisindeyse)
+3. BAĞIMLILIK TAKİBİ bilgileri (bağımlılık kategorisindeyse)
 
 ### YAPMAN GEREKENLER:
 1. Kullanıcının KENDİSİ hakkında verdiği derin bilgileri tespit et:
@@ -32,9 +33,15 @@ Aşağıdaki kullanıcı mesajını analiz et. Amacın iki şeyi güncel tutmakt
 2. Kullanıcının PARTNERİ hakkında verdiği bilgileri tespit et (İlişki kategorisindeyse):
    - Partner özellikleri, burcu, davranışları
 
-3. Anlık duygu durumlarını (Örn: "Şu an sinirliyim") KAYDETME. Sadece kalıcı veya uzun süreli bilgileri al.
+3. BAĞIMLILIK TAKİBİ (bağımlılık kategorisindeyse):
+   - Bağımlılık türü: dijital (oyun, sosyal medya, telefon), davranışsal (kumar, alışveriş), madde (alkol, sigara), yeme bozukluğu
+   - Tetikleyiciler: Kullanıcının bağımlılık davranışını neyin tetiklediği (stres, yalnızlık, can sıkıntısı, öfke, yorgunluk vb.)
+   - Nüks anları: Kullanıcının "yine yaptım", "bozdum", "dayanamadım" gibi ifadeleri
+   - Başarı anları: Kullanıcının direniş, kaçınma veya başarılı anlarını
 
-4. Eğer yeni bilgi yoksa ilgili alanı null veya boş liste olarak bırak.
+4. Anlık duygu durumlarını (Örn: "Şu an sinirliyim") KAYDETME. Sadece kalıcı veya uzun süreli bilgileri al.
+
+5. Eğer yeni bilgi yoksa ilgili alanı null veya boş liste olarak bırak.
 
 ### ÇIKTI FORMATI (Sadece JSON, başka hiçbir şey yazma):
 {
@@ -61,6 +68,13 @@ Aşağıdaki kullanıcı mesajını analiz et. Amacın iki şeyi güncel tutmakt
     "detected_zodiac": null,
     "detected_age": null,
     "detected_name": null
+  },
+  "addiction_data": {
+    "addiction_type": null,
+    "triggers_detected": [],
+    "relapse_noted": false,
+    "success_noted": false,
+    "notes": null
   }
 }
 
@@ -135,6 +149,11 @@ $partnerInfo
         // Apply Partner updates (only if partner exists and in relationship category)
         if (partner != null && category == 'iliskiler') {
           await _applyPartnerUpdates(partner, updates);
+        }
+        
+        // Apply Addiction tracking updates (only in bagimliliklar category)
+        if (category == 'bagimliliklar') {
+          await _applyAddictionUpdates(updates);
         }
       }
 
@@ -290,5 +309,73 @@ $partnerInfo
     ];
 
     return negativeKeywords.any((keyword) => trait.contains(keyword));
+  }
+
+  /// Apply Addiction tracking updates to User DNA
+  static Future<void> _applyAddictionUpdates(Map<String, dynamic> updates) async {
+    final addictionData = updates['addiction_data'] as Map<String, dynamic>?;
+    if (addictionData == null) return;
+
+    try {
+      List<String> newTriggers = [];
+      
+      // Extract addiction type
+      final addictionType = addictionData['addiction_type'];
+      if (addictionType != null && addictionType.toString().isNotEmpty) {
+        debugPrint('ShadowMemory: Addiction type detected: $addictionType');
+      }
+      
+      // Extract triggers detected from addiction conversation
+      final triggersDetected = addictionData['triggers_detected'] as List<dynamic>?;
+      if (triggersDetected != null && triggersDetected.isNotEmpty) {
+        for (final trigger in triggersDetected) {
+          final triggerStr = trigger.toString();
+          if (triggerStr.isNotEmpty) {
+            newTriggers.add(triggerStr);
+          }
+        }
+      }
+      
+      // Check for relapse or success notes
+      final relapseNoted = addictionData['relapse_noted'] as bool? ?? false;
+      final successNoted = addictionData['success_noted'] as bool? ?? false;
+      
+      if (relapseNoted) {
+        debugPrint('ShadowMemory: Relapse noted in conversation');
+      }
+      if (successNoted) {
+        debugPrint('ShadowMemory: Success/resistance noted in conversation');
+      }
+      
+      // Add new triggers to User DNA
+      if (newTriggers.isNotEmpty) {
+        final currentDNA = UserDNAService.currentDNA;
+        final existingTriggers = currentDNA?.triggers ?? [];
+        
+        // Merge triggers (avoid duplicates)
+        final mergedTriggers = <String>{...existingTriggers};
+        for (final trigger in newTriggers) {
+          if (!mergedTriggers.any((t) => t.toLowerCase() == trigger.toLowerCase())) {
+            mergedTriggers.add(trigger);
+          }
+        }
+        
+        if (mergedTriggers.length > existingTriggers.length) {
+          // Create update with new triggers
+          final dnaUpdate = UserDNAService.parseUpdatesFromJson({
+            'user_dna': {
+              'triggers': mergedTriggers.toList(),
+            }
+          });
+          
+          if (dnaUpdate != null) {
+            await UserDNAService.updateDNA(dnaUpdate);
+            debugPrint('ShadowMemory: Addiction triggers saved to DNA ✓ (${newTriggers.join(", ")})');
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('ShadowMemory: Error applying addiction updates: $e');
+    }
   }
 }

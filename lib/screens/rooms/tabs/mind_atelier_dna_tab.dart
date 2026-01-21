@@ -55,8 +55,91 @@ class _MindAtelierDNATabState extends State<MindAtelierDNATab> {
               _buildTraitsList(_dna!.personalityTraits!),
               const SizedBox(height: 24),
             ],
-            if (_dna?.coreValues?.isNotEmpty ?? false)
+            if (_dna?.coreValues?.isNotEmpty ?? false) ...[
               _buildValuesGrid(_dna!.coreValues!),
+              const SizedBox(height: 24),
+            ],
+
+            // GÜÇLÜ YÖNLER (STRENGTHS)
+            if (_dna?.strengths?.isNotEmpty ?? false) ...[
+              _buildSectionTitle('Süper Güçleriniz', Icons.flash_on_rounded, AppTheme.terracotta),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _dna!.strengths!.map((s) => _buildChip(s, AppTheme.terracotta, true)).toList(),
+              ),
+              const SizedBox(height: 24),
+            ],
+
+            // GÖLGE YAN & TETİKLEYİCİLER (SHADOW WORK)
+            if ((_dna?.fears?.isNotEmpty ?? false) || (_dna?.triggers?.isNotEmpty ?? false)) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2C3E50), // Darker, shadow theme
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.psychology_alt_rounded, color: Colors.white70),
+                        SizedBox(width: 10),
+                        Text(
+                          'Gölge Yan & Tetikleyiciler',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      child: Text(
+                        'Gerçek değişim, karanlıkla yüzleşince başlar. İşte seni yöneten gizli kodlar:',
+                        style: TextStyle(color: Colors.white60, fontSize: 12),
+                      ),
+                    ),
+                    
+                    if (_dna?.fears?.isNotEmpty ?? false) ...[
+                      const Text('KORKULAR', style: TextStyle(color: AppTheme.terracotta, fontSize: 11, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _dna!.fears!.map((f) => _buildChip(f, Colors.white24, false, textColor: Colors.white)).toList(),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    if (_dna?.triggers?.isNotEmpty ?? false) ...[
+                      const Text('TETİKLEYİCİLER', style: TextStyle(color: AppTheme.terracotta, fontSize: 11, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _dna!.triggers!.map((t) => _buildChip(t, Colors.white24, false, textColor: Colors.white)).toList(),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
             
             if (!hasData)
               Center(
@@ -220,6 +303,37 @@ class _MindAtelierDNATabState extends State<MindAtelierDNATab> {
           )).toList(),
         ),
       ],
+    );
+  }
+  Widget _buildSectionTitle(String title, IconData icon, Color color) {
+    return Row(
+      children: [
+        Icon(icon, color: color, size: 20),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.forestCharcoal),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChip(String label, Color color, bool isOutline, {Color textColor = AppTheme.forestCharcoal}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: isOutline ? Colors.transparent : color,
+        borderRadius: BorderRadius.circular(20),
+        border: isOutline ? Border.all(color: color) : null,
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12, 
+          color: isOutline ? color : textColor, 
+          fontWeight: FontWeight.w600
+        ),
+      ),
     );
   }
 }

@@ -33,6 +33,12 @@ class _HomeScreenState extends State<HomeScreen> {
   
   final List<Map<String, dynamic>> _announcements = [
     {
+      'title': 'Sessiz Uyumun Matematiği', // S.U.M. Tribute
+      'subtitle': 'Milyarlarca veri noktası arasında bazı frekanslar hesaplanamaz. Bu sistem, standart kalıpların ötesindeki o eşsiz anlaşılma hissinin peşindedir.',
+      'icon': '💎',
+      'color': const Color(0xFF5DADE2), // Serene Sky Blue
+    },
+    {
       'title': 'Zihin DNA\'nı Keşfet',
       'subtitle': 'Yaptığın her derin konuşma, karakter haritandaki travmaları, güçlü yönleri ve hedefleri gerçek zamanlı güncelleyerek sana özel bir rehberlik sunar.',
       'icon': '🧠',
@@ -873,8 +879,8 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // Zihin Testleri (zihin_testleri) için özel kart
-    if (category == 'zihin_testleri') {
+    // Bağımlılıklarım için özel kart
+    if (category == 'bagimliliklar') {
       return GestureDetector(
         onTap: () => _openChat(context, category),
         child: Container(
@@ -887,20 +893,14 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           child: Row(
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.asset(
-                  'assets/images/tests.png',
-                  width: 70,
-                  height: 70,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    width: 70,
-                    height: 70,
-                    color: AppTheme.sageGreen.withOpacity(0.1),
-                    child: Center(child: Text(icon, style: const TextStyle(fontSize: 30))),
-                  ),
+              Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  color: AppTheme.terracotta.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                child: Center(child: Text(icon, style: const TextStyle(fontSize: 34))),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -921,7 +921,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Row(
                       children: [
                         Text(
-                          'Testleri Çöz',
+                          'Başla',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -1066,14 +1066,76 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          Text(
-            data['title'],
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+          if (data['title'] == 'Sessiz Uyumun Matematiği')
+            RichText(
+              text: TextSpan(
+                style: const TextStyle(
+                  fontFamily: 'Outfit', // Or default app font
+                  fontSize: 20,
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w500,
+                ),
+                children: [
+                  TextSpan(
+                    text: 'S',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 24,
+                      shadows: [
+                        BoxShadow(
+                          color: Colors.white.withOpacity(0.8),
+                          blurRadius: 12,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const TextSpan(text: 'essiz '),
+                  TextSpan(
+                    text: 'U',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 24,
+                      shadows: [
+                        BoxShadow(
+                          color: Colors.white.withOpacity(0.8),
+                          blurRadius: 12,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const TextSpan(text: 'yumun '),
+                  TextSpan(
+                    text: 'M',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 24,
+                      shadows: [
+                        BoxShadow(
+                          color: Colors.white.withOpacity(0.8),
+                          blurRadius: 12,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const TextSpan(text: 'atematiği'),
+                ],
+              ),
+            )
+          else
+            Text(
+              data['title'],
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
           const SizedBox(height: 8),
           Flexible(
             child: Text(
@@ -1127,9 +1189,10 @@ class _HomeScreenState extends State<HomeScreen> {
       Navigator.of(context).push(
         MaterialPageRoute(builder: (context) => const MindAtelierRoomScreen()),
       );
-    } else if (category == 'zihin_testleri') {
+    } else if (category == 'bagimliliklar') {
+      // Bağımlılıklarım - şimdilik genel chat ekranı
       Navigator.of(context).push(
-        MaterialPageRoute(builder: (context) => const TestsRoomScreen()),
+        MaterialPageRoute(builder: (context) => ChatScreen(category: category)),
       );
     } else if (category == 'duygusal_destek') {
       // These use a general chat screen but with their specific personas

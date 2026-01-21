@@ -197,6 +197,7 @@ class _RelationshipChatTabState extends State<RelationshipChatTab>
 2. İletişim tonu nasıl? (pozitif, negatif, nötr)
 3. Herhangi bir sorun veya gerginlik var mı?
 4. Kullanıcıya pratik tavsiyeler ver.
+5. TOKSİKLİK METRESİ: Bu konuşmanın toksiklik seviyesini 0 ile 100 arasında bir puan ver ve nedenini kısaca açıkla. (Örn: Toksiklik: 85/100 - Manipülatif dil kullanımı var).
 
 Samimi ve destekleyici bir dil kullan. Türkçe yanıt ver.''',
       );

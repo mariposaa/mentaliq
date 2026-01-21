@@ -7,6 +7,9 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
 
 
+import 'package:audioplayers/audioplayers.dart';
+import '../../widgets/compassionate_background.dart';
+
 class ChatScreen extends StatefulWidget {
   final String category;
   final String? customSystemPrompt;
@@ -23,6 +26,13 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<_ChatMessage> _messages = [];
   bool _isLoading = false;
   int _tokenBalance = 100;
+  
+  // Atmosphere & Audio
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  AtmosphereType _currentAtmosphere = AtmosphereType.none;
+  bool _isMusicPlaying = false;
+  String? _currentTrack;
+  double _volume = 0.5;
 
   // Speech to Text
   final stt.SpeechToText _speech = stt.SpeechToText();
@@ -104,6 +114,11 @@ class _ChatScreenState extends State<ChatScreen> {
 
   String _getWelcomeMessage() {
     final name = AppConstants.categoryNames[widget.category] ?? widget.category;
+    
+    if (widget.category == 'duygusal_destek') {
+       return 'Merhaba! 🌿\n\nBen $name alanında seninleyim.\n\n🔒 **GÜVENLİK NOTU:**\nBuradaki konuşmalarımız **kesinlikle kaydedilmemektedir**. Sadece sana daha iyi rehberlik edebilmem için zihin haritana (DNA) küçük notlar alınır.\n\nİçin rahat olsun, güvendesin. Neler hissediyorsun?';
+    }
+
     return 'Merhaba! 🌿\n\nBen $name alanında sana yardımcı olmak için buradayım. Seni yargılamadan dinleyeceğim.\n\nBenimle ne paylaşmak istersin?';
   }
 
@@ -188,105 +203,290 @@ class _ChatScreenState extends State<ChatScreen> {
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
+    _audioPlayer.dispose();
     GeminiService.clearSession();
-
     super.dispose();
+  }
+
+  Future<void> _playTrack(String trackName, AtmosphereType type) async {
+    try {
+      if (_currentTrack == trackName && _isMusicPlaying) {
+        await _audioPlayer.pause();
+        setState(() => _isMusicPlaying = false);
+      } else {
+        await _audioPlayer.setSource(AssetSource('sounds/$trackName'));
+        await _audioPlayer.setVolume(_volume);
+        await _audioPlayer.setReleaseMode(ReleaseMode.loop);
+        await _audioPlayer.resume();
+        setState(() {
+          _isMusicPlaying = true;
+          _currentTrack = trackName;
+          _currentAtmosphere = type;
+        });
+      }
+    } catch (e) {
+      debugPrint('Audio error: $e');
+    }
+  }
+
+  void _showAtmospherePanel() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: AppTheme.warmCream,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Terapi Atmosferi',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.forestCharcoal),
+            ),
+            const SizedBox(height: 20),
+            
+            // Tracks
+            _buildAtmosphereOption(
+              'Yağmur Sesi', 
+              'rain-and-thunder-176105.mp3', 
+              AtmosphereType.rain, 
+              Icons.water_drop_outlined,
+              Colors.blueGrey
+            ),
+            _buildAtmosphereOption(
+              'Orman Sesi', 
+              'night-forest-soundscape-158701.mp3', 
+              AtmosphereType.fireflies, 
+              Icons.forest_outlined,
+              Colors.green
+            ),
+            _buildAtmosphereOption(
+              'Okyanus', 
+              'soothing-ocean-waves-372489.mp3', 
+              AtmosphereType.breath, 
+              Icons.waves_rounded,
+              Colors.blueAccent
+            ),
+            _buildAtmosphereOption(
+              'Melankolik Piyano', 
+              'dark-crime-piano-drama-449252.mp3', 
+              AtmosphereType.deep, 
+              Icons.piano_rounded,
+              Colors.deepPurple
+            ),
+
+            if (_isMusicPlaying) ...[
+              const SizedBox(height: 30),
+              Row(
+                children: [
+                  const Icon(Icons.volume_down_rounded, size: 20, color: AppTheme.mutedSage),
+                  Expanded(
+                    child: Slider(
+                      value: _volume,
+                      activeColor: AppTheme.sageGreen,
+                      inactiveColor: AppTheme.softBorder,
+                      onChanged: (val) {
+                        setState(() => _volume = val);
+                        _audioPlayer.setVolume(val);
+                      },
+                    ),
+                  ),
+                  const Icon(Icons.volume_up_rounded, size: 20, color: AppTheme.mutedSage),
+                ],
+              ),
+            ],
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAtmosphereOption(String title, String file, AtmosphereType type, IconData icon, Color color) {
+    final isSelected = _currentTrack == file && _isMusicPlaying;
+    
+    return ListTile(
+      onTap: () {
+        _playTrack(file, type);
+        Navigator.pop(context);
+      },
+      leading: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: isSelected ? color : color.withOpacity(0.1),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          isSelected ? Icons.pause_rounded : Icons.play_arrow_rounded, 
+          color: isSelected ? Colors.white : color
+        ),
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          color: AppTheme.forestCharcoal
+        ),
+      ),
+      trailing: isSelected 
+        ? Icon(icon, color: color) 
+        : Icon(icon, color: AppTheme.mutedSage.withOpacity(0.5)),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final categoryName = AppConstants.categoryNames[widget.category] ?? widget.category;
     final categoryIcon = AppConstants.categoryIcons[widget.category] ?? '🌿';
+    
+    // Check if this is the Compassionate Zone
+    final isCompassionateZone = widget.category == 'duygusal_destek';
 
     return Scaffold(
       backgroundColor: AppTheme.sandBeige,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-              decoration: BoxDecoration(
-                color: AppTheme.sandBeige,
-                border: Border(bottom: BorderSide(color: AppTheme.softBorder)),
-              ),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-                    onPressed: () => Navigator.pop(context),
-                    color: AppTheme.forestCharcoal,
-                  ),
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: AppTheme.sageGreen.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(12),
+      body: CompassionateBackground(
+        type: isCompassionateZone ? _currentAtmosphere : AtmosphereType.none,
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                decoration: BoxDecoration(
+                  // Transparent header if background is active
+                  color: (isCompassionateZone && _currentAtmosphere != AtmosphereType.none) 
+                      ? Colors.transparent 
+                      : AppTheme.sandBeige,
+                  border: Border(bottom: BorderSide(color: AppTheme.softBorder)),
+                ),
+                child: Row(
+                  children: [
+                    IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+                        onPressed: () => Navigator.pop(context),
+                        color: (_currentAtmosphere != AtmosphereType.none && isCompassionateZone) 
+                            ? Colors.white 
+                            : AppTheme.forestCharcoal,
+                      ),
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppTheme.sageGreen.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Center(
+                        child: Text(categoryIcon, style: const TextStyle(fontSize: 20)),
+                      ),
                     ),
-                    child: Center(
-                      child: Text(categoryIcon, style: const TextStyle(fontSize: 20)),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          categoryName,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            categoryName,
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: (_currentAtmosphere != AtmosphereType.none && isCompassionateZone) 
+                                      ? Colors.white 
+                                      : AppTheme.forestCharcoal,
+                                ),
+                          ),
+                          Row(
+                            children: [
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  color: _isLoading ? AppTheme.terracotta : AppTheme.sageGreen,
+                                  shape: BoxShape.circle,
+                                ),
                               ),
-                        ),
-                        Row(
-                          children: [
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: BoxDecoration(
-                                color: _isLoading ? AppTheme.terracotta : AppTheme.sageGreen,
-                                shape: BoxShape.circle,
+                              const SizedBox(width: 6),
+                              Text(
+                                _isLoading ? 'Düşünüyor...' : 'Dinliyorum',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: (_currentAtmosphere != AtmosphereType.none && isCompassionateZone) 
+                                          ? Colors.white70 
+                                          : AppTheme.mutedSage,
+                                    ),
                               ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              _isLoading ? 'Düşünüyor...' : 'Dinliyorum',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppTheme.mutedSage,
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ],
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  // Token indicator
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppTheme.sageGreen.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('✨', style: TextStyle(fontSize: 12)),
-                        const SizedBox(width: 4),
-                        Text(
-                          '$_tokenBalance',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.sageGreen,
+                    
+                    // Atmosphere Toggle Button (Only for Compassionate Zone)
+                    if (isCompassionateZone)
+                    if (isCompassionateZone)
+                      GestureDetector(
+                        onTap: _showAtmospherePanel,
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: _isMusicPlaying 
+                                ? AppTheme.terracotta 
+                                : AppTheme.sageGreen.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                               color: _isMusicPlaying ? Colors.transparent : AppTheme.sageGreen.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _isMusicPlaying ? 'Atmosfer Açık' : 'Atmosferi Değiştir',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: _isMusicPlaying ? Colors.white : AppTheme.sageGreen,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Icon(
+                                _isMusicPlaying ? Icons.music_note_rounded : Icons.spa_outlined,
+                                size: 16,
+                                color: _isMusicPlaying ? Colors.white : AppTheme.sageGreen,
+                              ),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
+
+                    // Token indicator
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppTheme.sageGreen.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('✨', style: TextStyle(fontSize: 12)),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$_tokenBalance',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.sageGreen,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
             // Messages
             Expanded(
@@ -389,8 +589,9 @@ class _ChatScreenState extends State<ChatScreen> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildMessageBubble(_ChatMessage message) {
     return Padding(

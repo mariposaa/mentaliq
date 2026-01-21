@@ -264,6 +264,10 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
     } else {
       _speech.stop();
       setState(() => _isListening = false);
+      // Fix: If manually stopped, trigger analysis if we have text
+      if (_dreamText.isNotEmpty) {
+        _runDreamAnalysis();
+      }
     }
   }
 
@@ -504,7 +508,7 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
         collapsedIconColor: Colors.white60,
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
         children: [
-          _buildInputField(_dateController, 'Doğum Tarihi', '12.05.1995', Icons.calendar_today),
+          _buildInputField(_dateController, 'Doğum Tarihi', 'Gün . Ay . Yıl', Icons.calendar_today),
           const SizedBox(height: 12),
           Row(
             children: [

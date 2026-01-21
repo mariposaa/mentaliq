@@ -18,7 +18,7 @@ class AppConstants {
     'stil_danismanligi',
     'motivasyon', // Gelecek Mimarı
     'duygusal_destek', // Şefkatli Gölge
-    'zihin_testleri',
+    'bagimliliklar',
   ];
 
   
@@ -26,10 +26,10 @@ class AppConstants {
   static const Map<String, String> categoryNames = {
     'iliskiler': 'Siber-Dost ve İlişki Mimarı',
     'duygusal_destek': 'Şefkatli Gölge',
-    'stil_danismanligi': 'Arketipik Stil',
+    'stil_danismanligi': 'Dolabım',
     'anksiyete': 'Astroloji ve Rüya (Cyber-Mistik)',
     'kendin_kesfet': 'Persona Psikoloji',
-    'zihin_testleri': 'Zihin Atölyesi',
+    'bagimliliklar': 'Bağımlılıklarım',
     'motivasyon': 'Gelecek Mimarı',
   };
 
@@ -41,7 +41,7 @@ class AppConstants {
     'stil_danismanligi': '🧥',
     'anksiyete': '🌌',
     'kendin_kesfet': '🎭',
-    'zihin_testleri': '🧩',
+    'bagimliliklar': '🔗',
     'motivasyon': '🗺️',
   };
 
@@ -52,7 +52,7 @@ class AppConstants {
     'duygusal_destek': 'Derin empati ve travma duyarlı destek',
     'kendin_kesfet': 'Kahramanın Yolculuğu ve psikolojik derinlik',
     'anksiyete': 'Doğum haritası ve rüya tabiri analizi',
-    'zihin_testleri': 'Bilişsel ve duygusal zeka laboratuvarı',
+    'bagimliliklar': 'Dijital ve davranışsal bağımlılık yönetimi',
     'stil_danismanligi': 'Kimlik ve arketip odaklı stil mimarlığı',
     'motivasyon': 'Kariyer, dopamin ve gelecek stratejisti',
   };
