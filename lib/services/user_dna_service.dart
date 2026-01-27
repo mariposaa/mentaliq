@@ -71,6 +71,66 @@ class UserDNAService {
     }
   }
 
+  /// Override specific lists (For Memory Pruning - Garbage Collection)
+  static Future<bool> overrideLists(UserDNAModel updates) async {
+    try {
+      final uid = AuthService.userId;
+      if (uid == null) return false;
+
+      // Create data map manually to ensure overwrite, not merge
+      final Map<String, dynamic> data = {};
+      
+      if (updates.traumas != null) data['traumas'] = updates.traumas;
+      if (updates.triggers != null) data['triggers'] = updates.triggers;
+      if (updates.fears != null) data['fears'] = updates.fears;
+      if (updates.goals != null) data['goals'] = updates.goals;
+      if (updates.strengths != null) data['strengths'] = updates.strengths;
+      
+      if (data.isEmpty) return false;
+      
+      data['last_updated'] = DateTime.now().toIso8601String();
+
+      // Use update() to only change specified fields but OVERWRITE them completely
+      await AuthService.firestore
+          .collection('users')
+          .doc(uid)
+          .collection('user_data')
+          .doc('dna')
+          .set(data, SetOptions(merge: true));
+
+      // Update cache
+      if (_cachedDNA != null) {
+        _cachedDNA = UserDNAModel(
+          age: _cachedDNA!.age,
+          zodiac: _cachedDNA!.zodiac,
+          profession: _cachedDNA!.profession,
+          mbti: _cachedDNA!.mbti,
+          personalityTraits: _cachedDNA!.personalityTraits,
+          coreValues: _cachedDNA!.coreValues,
+          fears: updates.fears ?? _cachedDNA!.fears, // Replace if updated
+          hobbies: _cachedDNA!.hobbies,
+          lifeStage: _cachedDNA!.lifeStage,
+          relationshipStatus: _cachedDNA!.relationshipStatus,
+          birthDate: _cachedDNA!.birthDate,
+          birthTime: _cachedDNA!.birthTime,
+          birthLocation: _cachedDNA!.birthLocation,
+          traumas: updates.traumas ?? _cachedDNA!.traumas, // Replace if updated
+          triggers: updates.triggers ?? _cachedDNA!.triggers, // Replace if updated
+          strengths: updates.strengths ?? _cachedDNA!.strengths, // Replace if updated
+          goals: updates.goals ?? _cachedDNA!.goals, // Replace if updated
+          dynamicRelationships: _cachedDNA!.dynamicRelationships,
+          lastUpdated: DateTime.now(),
+        );
+      }
+      
+      debugPrint('UserDNAService: List Override (Pruning) Successful');
+      return true;
+    } catch (e) {
+      debugPrint('UserDNAService: Error overriding lists: $e');
+      return false;
+    }
+  }
+
   /// Get DNA context for AI prompt
   static Future<String> getDNAForAI() async {
     try {

@@ -17,7 +17,34 @@ String buildDynamicContext(String userMessage, String? partnerZodiac) {
     injections.add(zodiacStrategies[partnerZodiac.toLowerCase()]!);
   }
 
-  // 2. Senaryo Kartını Çek (Akıllı Niyet Algılama)
+  // 2. Duygu Analizi Katmanı (Keyword Spotting + Tone Shift)
+  // Anlık duygu durumuna göre ton ayarı yap
+  if (lowerMsg.contains('öfke') || lowerMsg.contains('kızgın') || lowerMsg.contains('nefret') || 
+      lowerMsg.contains('sinirli') || lowerMsg.contains('bıktım') || lowerMsg.contains('!')) {
+    injections.add('''### DUYGU TESPİTİ: ÖFKE/HIRS
+STRATEJİ: Kullanıcının öfkesini yumuşatma ama onu bastırma.
+- Eğer 'Harsh' modundaysan: Öfkesini haklı çıkar ama yönünü değiştir. ("Haklısın, bu tam bir saçmalık ama enerjini buna harcama.")
+- Eğer 'Comfort' modundaysan: Sakinleştirici ol. ("Derin bir nefes al, bu öfke seni yakmasın.")''');
+  }
+
+  if (lowerMsg.contains('üzgün') || lowerMsg.contains('ağla') || lowerMsg.contains('canım yan') || 
+      lowerMsg.contains('kötü his') || lowerMsg.contains('mahvol') || lowerMsg.contains('bitti')) {
+    injections.add('''### DUYGU TESPİTİ: ÜZÜNTÜ/KIRGINLIK
+STRATEJİ: Şu an eleştiri veya set taktik zamanı değil.
+- Hangi modda olursan ol, önce EMPATİ kur.
+- Kullanıcıya "yalnız olmadığını" hissettir.
+- Taktik vermeden önce duygusunu doğrulamasını sağla.''');
+  }
+
+  if (lowerMsg.contains('kork') || lowerMsg.contains('endişe') || lowerMsg.contains('panik') || 
+      lowerMsg.contains('ne yapacağım') || lowerMsg.contains('bilmiyorum')) {
+    injections.add('''### DUYGU TESPİTİ: KAYGI/BELİRSİZLİK
+STRATEJİ: Netlik ve Güven ver.
+- Belirsiz cümleler kurma. Net adımlar söyle.
+- "Bunu çözeceğiz", "Kontrol sende" mesajı ver.''');
+  }
+
+  // 3. Senaryo Kartını Çek (Akıllı Niyet Algılama)
   // Aldatılma niyetini sorgula (Korku mu, niyet mi, geçmiş mi?)
   if ((lowerMsg.contains('aldat') && !lowerMsg.contains('mıydı')) || lowerMsg.contains('ihanet')) {
     if (!lowerMsg.contains('korku') && !lowerMsg.contains('travma')) {

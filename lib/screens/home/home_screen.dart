@@ -12,6 +12,7 @@ import '../rooms/astrology_dream_room_screen.dart';
 import '../rooms/style_room_screen.dart';
 import '../rooms/mind_atelier_room_screen.dart';
 import '../rooms/tests_room_screen.dart';
+import '../community/campfire_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,6 +22,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  int _selectedNavIndex = 0;  // Bottom navigation index
+  
   bool _isMoodBarExpanded = false;
   String? _selectedMoodId;  // Now stores mood ID, not emoji
   late TextEditingController _nameController;
@@ -150,35 +153,108 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         backgroundColor: AppTheme.sandBeige,
-        body: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildMoodSelector(),
-                      const SizedBox(height: 20),
-                      _buildSectionTitle('Seninle buradayım'),
-                      const SizedBox(height: 12),
-                    // Dynamic Card Construction
-                    ..._buildCategoryGrid(),
-                    const SizedBox(height: 40),
+        body: _selectedNavIndex == 0 ? _buildHomeContent() : const CampfireScreen(),
+        bottomNavigationBar: _buildBottomNav(),
+      ),
+    );
+  }
 
-                    const SizedBox(height: 40),
-                  ],
-                ),
+  Widget _buildBottomNav() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.warmCream,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(0, Icons.home_rounded, 'Ana Sayfa'),
+              _buildNavItem(1, Icons.local_fire_department_rounded, 'Kamp Ateşi'),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(int index, IconData icon, String label) {
+    final isSelected = _selectedNavIndex == index;
+    final isCampfire = index == 1;
+    
+    return GestureDetector(
+      onTap: () => setState(() => _selectedNavIndex = index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected 
+              ? (isCampfire ? AppTheme.terracotta.withOpacity(0.15) : AppTheme.sageGreen.withOpacity(0.15))
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: isSelected 
+                  ? (isCampfire ? AppTheme.terracotta : AppTheme.sageGreen)
+                  : AppTheme.mutedSage,
+              size: 24,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected 
+                    ? (isCampfire ? AppTheme.terracotta : AppTheme.sageGreen)
+                    : AppTheme.mutedSage,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                fontSize: 14,
               ),
             ),
           ],
         ),
       ),
-    ),
-  );
-}
+    );
+  }
+
+  Widget _buildHomeContent() {
+    return SafeArea(
+      child: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildMoodSelector(),
+                  const SizedBox(height: 20),
+                  _buildSectionTitle('Seninle buradayım'),
+                  const SizedBox(height: 12),
+                  // Dynamic Card Construction
+                  ..._buildCategoryGrid(),
+                  const SizedBox(height: 40),
+
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildSectionTitle(String title) {
     return Text(

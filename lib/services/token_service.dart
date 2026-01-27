@@ -12,6 +12,8 @@ class TokenService {
   static const int _styleStrategyTokenCost = 10; // Stil stratejisi bedeli
   static const int _dreamTokenCost = 20; // Rüya analizi bedeli
   static const int _adRewardTokens = 30;
+  static const int _campfireJoinCost = 50; // İlk oturum (gruba katılım)
+  static const int _campfireSessionCost = 20; // 2-5. oturumlar
 
   /// Get current token balance
   static Future<int> getBalance() async {
@@ -307,10 +309,76 @@ class TokenService {
     }
   }
 
+  // ==================== CAMPFIRE TOKEN İŞLEMLERİ ====================
+
+  /// Check if has enough tokens for Campfire join (50 tokens)
+  static Future<bool> hasEnoughTokensForCampfireJoin() async {
+    final balance = await getBalance();
+    return balance >= _campfireJoinCost;
+  }
+
+  /// Use tokens for Campfire join (50 tokens)
+  static Future<bool> useTokensForCampfireJoin() async {
+    try {
+      final userId = AuthService.userId;
+      if (userId == null) return false;
+
+      final balance = await getBalance();
+      if (balance < _campfireJoinCost) {
+        debugPrint('Insufficient tokens for Campfire join: $balance < $_campfireJoinCost');
+        return false;
+      }
+
+      await AuthService.firestore.collection('users').doc(userId).set({
+        'tokens': FieldValue.increment(-_campfireJoinCost),
+        'lastUsedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      debugPrint('Tokens used for Campfire join: -$_campfireJoinCost');
+      return true;
+    } catch (e) {
+      debugPrint('Error using tokens for Campfire join: $e');
+      return false;
+    }
+  }
+
+  /// Check if has enough tokens for Campfire session (20 tokens)
+  static Future<bool> hasEnoughTokensForCampfireSession() async {
+    final balance = await getBalance();
+    return balance >= _campfireSessionCost;
+  }
+
+  /// Use tokens for Campfire session (20 tokens)
+  static Future<bool> useTokensForCampfireSession() async {
+    try {
+      final userId = AuthService.userId;
+      if (userId == null) return false;
+
+      final balance = await getBalance();
+      if (balance < _campfireSessionCost) {
+        debugPrint('Insufficient tokens for Campfire session: $balance < $_campfireSessionCost');
+        return false;
+      }
+
+      await AuthService.firestore.collection('users').doc(userId).set({
+        'tokens': FieldValue.increment(-_campfireSessionCost),
+        'lastUsedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      debugPrint('Tokens used for Campfire session: -$_campfireSessionCost');
+      return true;
+    } catch (e) {
+      debugPrint('Error using tokens for Campfire session: $e');
+      return false;
+    }
+  }
+
   // Getters
   static int get messageTokenCost => _messageTokenCost;
   static int get analysisTokenCost => _analysisTokenCost;
   static int get adRewardTokens => _adRewardTokens;
   static int get initialTokens => _initialTokens;
   static int get styleStrategyTokenCost => _styleStrategyTokenCost;
+  static int get campfireJoinCost => _campfireJoinCost;
+  static int get campfireSessionCost => _campfireSessionCost;
 }

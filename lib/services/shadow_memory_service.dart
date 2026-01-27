@@ -208,7 +208,7 @@ $partnerInfo
     });
   }
 
-  /// Apply User DNA updates
+  /// Apply User DNA updates (always)
   static Future<void> _applyUserDNAUpdates(Map<String, dynamic> updates) async {
     final userDNA = updates['user_dna'] as Map<String, dynamic>?;
     if (userDNA == null) return;
@@ -217,6 +217,113 @@ $partnerInfo
     if (dnaUpdates != null) {
       await UserDNAService.updateDNA(dnaUpdates);
       debugPrint('ShadowMemory: User DNA updated ✓');
+      
+      // Check for memory bloat and prune if necessary
+      await _checkAndPruneMemory();
+    }
+  }
+  
+  /// Check Memory Bloat (Hafıza Şişkinliği Kontrolü)
+  static Future<void> _checkAndPruneMemory() async {
+    final dns = UserDNAService.currentDNA;
+    if (dns == null) return;
+    
+    // Thresholds
+    const int maxListSize = 15;
+    
+    bool needsPruning = false;
+    List<String> pruningTargets = [];
+    
+    if ((dns.triggers?.length ?? 0) > maxListSize) pruningTargets.add('triggers');
+    if ((dns.fears?.length ?? 0) > maxListSize) pruningTargets.add('fears');
+    if ((dns.goals?.length ?? 0) > maxListSize) pruningTargets.add('goals');
+    
+    if (pruningTargets.isNotEmpty) {
+      debugPrint('ShadowMemory: Memory bloat detected in $pruningTargets. Starting Garbage Collection...');
+      await _pruneListWithAI(dns, pruningTargets);
+    }
+  }
+  
+  /// Prune specific lists using AI summarization
+  static Future<void> _pruneListWithAI(dynamic currentDNA, List<String> targets) async {
+    if (_model == null) return;
+    
+    try {
+      final prompt = '''
+GÖREV: Hafıza Temizliği (Memory Garbage Collection)
+Aşağıdaki kullanıcı verileri çok şişti. Lütfen bu listeleri analiz et, birbirini tekrar edenleri birleştir ve EN ÖNEMLİ, KÖK maddeleri seçerek listeyi kısalt.
+
+MEVCUT VERİLER:
+${targets.contains('triggers') ? 'Tetikleyiciler (${currentDNA.triggers?.length}): ${currentDNA.triggers}' : ''}
+${targets.contains('fears') ? 'Korkular (${currentDNA.fears?.length}): ${currentDNA.fears}' : ''}
+${targets.contains('goals') ? 'Hedefler (${currentDNA.goals?.length}): ${currentDNA.goals}' : ''}
+
+İSTENEN ÇIKTI (JSON):
+{
+  "user_dna": {
+    ${targets.contains('triggers') ? '"triggers": ["...en önemli 5-7 madde..."],' : ''}
+    ${targets.contains('fears') ? '"fears": ["...en önemli 5-7 madde..."],' : ''}
+    ${targets.contains('goals') ? '"goals": ["...en önemli 5-7 madde..."]' : ''}
+  }
+}
+''';
+
+      final response = await _model!.generateContent([Content.text(prompt)]);
+      final updates = _parseResponse(response.text ?? '');
+      
+      if (updates != null) {
+        final dnaUpdates = UserDNAService.parseUpdatesFromJson(updates);
+        if (dnaUpdates != null) {
+          // We need to OVERWRITE the specific lists, not merge.
+          // UserDNAService.updateDNA merges by default.
+          // To support overwrite, we might need a specific flag or method, 
+          // bu for now, let's assume updateDNA's merge logic simply adds. 
+          // WAIT: To prune, we must REPLACE the list. 
+          // Since UserDNAService.merge ADDS to the list, we need to handle this.
+          // Solution: We will manually update Firestore to overwrite these specific fields.
+          
+          final uid = UserDNAService.currentDNA?.relationshipStatus; // Accessing auth indirectly or need Auth service
+          // Actually, UserDNAService has updateDNA which merges. 
+          // Let's rely on UserDNAService exposing a 'replace' method or similar.
+          // or we can implement a custom overwrite here using Firestore directly if we had access, 
+          // but we don't have AuthService imported here properly for direct use maybe? 
+          // UserDNAService imports AuthService.
+          
+          // Let's try to just call updateDNA for now, but realizing merge will keep old ones.
+          // Modification: The simplest way without changing UserDNAService architecture 
+          // is to allow 'updateDNA' to accept an 'overwrite' flag or similar? 
+          // Or simpler: UserDNAService.updateDNA logic: 
+          // _mergeList(existing, updates) -> joins them.
+          
+          // Okay, I need to modify UserDNAService to allow overwriting lists or
+          // I can call a new method in UserDNAService 'overwriteDNA' which I will create?
+          // No, let's just use a special method in UserDNAService if possible.
+          // Or easier: Update UserDNAService.mergeList logic to handle a 'REPLACE' command? No.
+          
+          // Best approach: Add a forceOverwrite option to updateDNA in UserDNAService.
+          // But I cannot modify UserDNAService right now in this single tool call easily.
+          // I will assume for this step I write the logic, but I should also update UserDNAService 
+          // to support list replacement. 
+          
+          // However, for this specific request, the user said "Implement Memory Pruning".
+          // I will implement the logic here and then in the next step update UserDNAService 
+          // to support list replacement (resetting lists).
+          
+          // For now, let's just log the pruned lists would be applied.
+          // BUT to be functional, I really need that capability.
+          
+          // Let's implement _overwriteSpecificLists method here that calls Firestore directly?
+          // ShadowMemoryService imports UserDNAService. It does NOT import AuthService.
+          // So I can't call Firestore directly.
+          
+          // I will proceed with this change, and then add a method in UserDNAService called `overrideLists`.
+          
+          await UserDNAService.overrideLists(dnaUpdates); 
+          debugPrint('ShadowMemory: Garbage Collection Complete. Memory optimized. 🧹');
+        }
+      }
+    } catch (e) {
+      debugPrint('ShadowMemory: Pruning failed: $e');
     }
   }
 
