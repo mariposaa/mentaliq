@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/style_item.dart';
 import '../../../services/style_service.dart';
@@ -111,7 +110,7 @@ class _StyleClosetTabState extends State<StyleClosetTab> {
               const SizedBox(width: 10),
               Text(
                 'Yeni Ekle',
-                style: GoogleFonts.poppins(
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w600,
                   fontSize: 15,

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// Mentaliq Theme - Calming Wellness Design
 /// 
@@ -69,6 +68,52 @@ class AppTheme {
   static const double radiusLarge = 28.0;
   static const double radiusPill = 50.0;  // For pill-shaped buttons
 
+  /// Kamp Ateşi: akış kartında resim yüksekliği (foto boyutu ne olursa olsun bu alana sığar)
+  static const double forumFeedImageHeight = 200.0;
+  /// Kamp Ateşi: gönderi detay sayfasında resim max yüksekliği
+  static const double forumDetailImageMaxHeight = 320.0;
+  /// Kamp Ateşi: "Benim" sekmesinde kart resim yüksekliği
+  static const double forumMyCardImageHeight = 120.0;
+  /// Kamp Ateşi: Paylaş formunda seçilen foto önizleme yüksekliği
+  static const double forumSharePreviewHeight = 200.0;
+
+  // ═══════════════════════════════════════════════════════════════════
+  // FORUM POST TYPE BADGES
+  // ═══════════════════════════════════════════════════════════════════
+  
+  /// Paylaşım türü için emoji
+  static String postTypeEmoji(String postType) {
+    switch (postType) {
+      case 'confession': return '🤫';
+      case 'photo_story': return '📸';
+      case 'idea_question': return '💡';
+      case 'daily_answer': return '📅';
+      default: return '💬';
+    }
+  }
+  
+  /// Paylaşım türü için etiket metni
+  static String postTypeLabel(String postType) {
+    switch (postType) {
+      case 'confession': return 'İtiraf';
+      case 'photo_story': return 'Foto';
+      case 'idea_question': return 'Fikir';
+      case 'daily_answer': return 'Günün';
+      default: return '';
+    }
+  }
+  
+  /// Paylaşım türü için arka plan rengi
+  static Color postTypeColor(String postType) {
+    switch (postType) {
+      case 'confession': return const Color(0xFF9C7CBE); // Mor
+      case 'photo_story': return const Color(0xFF5B9BD5); // Mavi
+      case 'idea_question': return const Color(0xFF7CB87C); // Yeşil
+      case 'daily_answer': return terracotta;
+      default: return mutedSage;
+    }
+  }
+
   // ═══════════════════════════════════════════════════════════════════
   // THEME DATA
   // ═══════════════════════════════════════════════════════════════════
@@ -90,12 +135,10 @@ class AppTheme {
         onBackground: forestCharcoal,
       ),
       
-      // Typography - Poppins: Rounded, friendly, approachable
-      textTheme: GoogleFonts.poppinsTextTheme(
-        ThemeData.light().textTheme,
-      ).copyWith(
+      // Typography - system fonts for maximum build compatibility
+      textTheme: ThemeData.light().textTheme.copyWith(
         // Hero titles
-        displayLarge: GoogleFonts.poppins(
+        displayLarge: const TextStyle(
           fontSize: 32,
           fontWeight: FontWeight.w700,
           color: forestCharcoal,
@@ -103,47 +146,47 @@ class AppTheme {
           height: 1.2,
         ),
         // Section headers
-        headlineMedium: GoogleFonts.poppins(
+        headlineMedium: const TextStyle(
           fontSize: 22,
           fontWeight: FontWeight.w600,
           color: forestCharcoal,
           letterSpacing: -0.3,
         ),
         // Card titles
-        titleLarge: GoogleFonts.poppins(
+        titleLarge: const TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: forestCharcoal,
         ),
         // Subtitles
-        titleMedium: GoogleFonts.poppins(
+        titleMedium: const TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w500,
           color: forestCharcoal,
         ),
         // Body text
-        bodyLarge: GoogleFonts.poppins(
+        bodyLarge: const TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w400,
           color: forestCharcoal,
           height: 1.6,
         ),
         // Secondary body
-        bodyMedium: GoogleFonts.poppins(
+        bodyMedium: const TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w400,
           color: mutedSage,
           height: 1.5,
         ),
         // Small labels
-        bodySmall: GoogleFonts.poppins(
+        bodySmall: const TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w500,
           color: mutedSage,
           letterSpacing: 0.3,
         ),
         // Button text
-        labelLarge: GoogleFonts.poppins(
+        labelLarge: const TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w600,
           color: Colors.white,
@@ -156,7 +199,7 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.poppins(
+        titleTextStyle: const TextStyle(
           color: forestCharcoal,
           fontSize: 18,
           fontWeight: FontWeight.w600,
@@ -182,7 +225,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusPill),
           ),
-          textStyle: GoogleFonts.poppins(
+          textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -199,7 +242,7 @@ class AppTheme {
             borderRadius: BorderRadius.circular(radiusPill),
           ),
           side: const BorderSide(color: sageGreen, width: 1.5),
-          textStyle: GoogleFonts.poppins(
+          textStyle: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w500,
           ),
@@ -210,7 +253,7 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: sageGreen,
-          textStyle: GoogleFonts.poppins(
+          textStyle: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w500,
           ),
@@ -233,7 +276,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(radiusMedium),
           borderSide: const BorderSide(color: sageGreen, width: 2),
         ),
-        hintStyle: GoogleFonts.poppins(
+        hintStyle: const TextStyle(
           color: mutedSage,
           fontSize: 15,
         ),
@@ -262,11 +305,11 @@ class AppTheme {
         unselectedItemColor: mutedSage,
         type: BottomNavigationBarType.fixed,
         elevation: 0,
-        selectedLabelStyle: GoogleFonts.poppins(
+        selectedLabelStyle: const TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w500,
         ),
-        unselectedLabelStyle: GoogleFonts.poppins(
+        unselectedLabelStyle: const TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w400,
         ),
