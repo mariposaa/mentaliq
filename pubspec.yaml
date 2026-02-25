@@ -2,7 +2,7 @@ name: mentaliq
 description: "Mentaliq - Kişisel Gelişim ve Yapay Zeka Destekli Danışmanlık Uygulaması"
 publish_to: 'none'
 
-version: 1.0.0+9
+version: 1.2.1+10
 
 environment:
   sdk: ^3.5.4
@@ -56,6 +56,7 @@ dependencies:
   audioplayers: ^6.4.0
   http: ^1.6.0
   geolocator: ^12.0.0
+  google_mobile_ads: ^7.0.0
 
 dev_dependencies:
   flutter_test:
