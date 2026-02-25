@@ -4,13 +4,14 @@ import 'package:flutter/foundation.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
+import '../config/app_locale.dart';
 import 'user_dna_service.dart';
 import '../models/horoscope_model.dart';
 
 class HoroscopeService {
   static final String _apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
   static final _model = GenerativeModel(
-    model: 'gemini-2.0-flash',
+    model: 'gemini-2.5-flash',
     apiKey: _apiKey,
   );
 
@@ -87,6 +88,8 @@ class HoroscopeService {
       final dnaContext = await UserDNAService.getDNAForAI();
       
       final prompt = """
+${AppLocale.languageInstructionForAI}
+
 Sen usta bir Siber-Mistik Astroloğusun. Kullanıcının Master DNA'sını ve doğum bilgilerini kullanarak ona en derinden dokunacak $periodText yorumlarını hazırlaman gerekiyor.
 
 [KODLANMIŞ MASTER DNA]:

@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import '../config/app_constants.dart';
+import '../config/app_locale.dart';
 import '../utils/relationship_utils.dart';
 import 'answer_mode_service.dart';
 import 'partner_service.dart';
@@ -188,7 +189,7 @@ Tüm kartların ortak hafızası, kullanıcının Master DNA'sının koruyucusu 
   static Future<void> initialize(String apiKey) async {
     try {
       _model = GenerativeModel(
-        model: 'gemini-2.0-flash-exp',
+        model: 'gemini-2.5-flash',
         apiKey: apiKey,
         generationConfig: GenerationConfig(
           temperature: 0.7,
@@ -260,6 +261,7 @@ Tüm kartların ortak hafızası, kullanıcının Master DNA'sının koruyucusu 
       systemPrompt = customSystemPrompt ?? (_categoryPrompts[category] ?? _categoryPrompts['genel']!);
     }
 
+    systemPrompt = '${AppLocale.languageInstructionForAI}\n\n$systemPrompt';
 
     _chatSession = _model!.startChat(
       history: [
@@ -298,6 +300,8 @@ Tüm kartların ortak hafızası, kullanıcının Master DNA'sının koruyucusu 
         final dynamicContext = buildDynamicContext(message, partnerZodiac);
         
         final fullPrompt = '''
+${AppLocale.languageInstructionForAI}
+
 $systemPrompt
 $userDNA
 $dynamicContext
@@ -312,10 +316,10 @@ $message
           return 'Henüz bağlantı kurulmadı. Lütfen tekrar dene.';
         }
         
-        // Inject User DNA into message context for other categories
+        // Inject User DNA and language rule into message context for other categories
         final enhancedMessage = userDNA.isNotEmpty 
-            ? '$userDNA\n\n### KULLANICI MESAJI:\n$message'
-            : message;
+            ? '${AppLocale.languageInstructionForAI}\n\n$userDNA\n\n### KULLANICI MESAJI:\n$message'
+            : '${AppLocale.languageInstructionForAI}\n\n$message';
             
         final response = await _chatSession!.sendMessage(Content.text(enhancedMessage));
         responseText = response.text ?? 'Şu an yanıt veremedim.';
@@ -362,6 +366,8 @@ $message
       }
       
       final fullPrompt = '''
+${AppLocale.languageInstructionForAI}
+
 $systemPrompt
 $dynamicContext
 ### KULLANICI GİRDİSİ:
@@ -397,7 +403,7 @@ $userPrompt
 
     try {
       final systemPrompt = customSystemPrompt ?? (_categoryPrompts[category] ?? _categoryPrompts['genel']!);
-      final fullPrompt = '$systemPrompt\n\nKullanıcı: $prompt';
+      final fullPrompt = '${AppLocale.languageInstructionForAI}\n\n$systemPrompt\n\nKullanıcı: $prompt';
 
       final response = await _model!.generateContent([Content.text(fullPrompt)]);
       final responseText = response.text ?? 'Yanıt alınamadı.';
@@ -450,7 +456,8 @@ NOTLAR:
 ''';
 
     try {
-      final response = await _model!.generateContent([Content.text(prompt)]);
+      final promptWithLang = '${AppLocale.languageInstructionForAI}\n\n$prompt';
+      final response = await _model!.generateContent([Content.text(promptWithLang)]);
       return response.text;
     } catch (e) {
       debugPrint('Error getting astrology analysis: $e');

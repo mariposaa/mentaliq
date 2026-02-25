@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../config/app_locale.dart';
 import 'auth_service.dart';
 import 'user_dna_service.dart';
 import '../models/astro_model.dart';
@@ -11,7 +12,7 @@ class AstroService {
   final GenerativeModel _model;
 
   AstroService(String apiKey)
-      : _model = GenerativeModel(model: 'gemini-2.0-flash', apiKey: apiKey);
+      : _model = GenerativeModel(model: 'gemini-2.5-flash', apiKey: apiKey);
 
   Future<AstroData> getDailyAstro(String userSign) async {
     final date = DateFormat('dd MMMM yyyy').format(DateTime.now());
@@ -20,6 +21,8 @@ class AstroService {
 
     // Prompt Hazırlığı
     final prompt = '''
+${AppLocale.languageInstructionForAI}
+
 GÖREV: Sen Mentaliq uygulamasının "Siber-Mistik Kozmik Veri Motoru"sun.
 KULLANICI BURCU: $userSign
 TARİH: $date

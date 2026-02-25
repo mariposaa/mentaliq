@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
+import '../config/app_locale.dart';
 import 'auth_service.dart';
 import 'user_dna_service.dart';
 import '../models/dream_model.dart';
@@ -13,7 +14,7 @@ import '../models/dream_model.dart';
 class DreamService {
   static final String _apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
   static final _model = GenerativeModel(
-    model: 'gemini-2.0-flash', 
+    model: 'gemini-2.5-flash', 
     apiKey: _apiKey,
     generationConfig: GenerationConfig(
       responseMimeType: 'application/json',
@@ -26,6 +27,8 @@ class DreamService {
       final dnaContext = await UserDNAService.getDNAForAI();
 
       final promptText = """
+${AppLocale.languageInstructionForAI}
+
 GÖREV: Kullanıcının anlattığı rüyayı analiz et.
 ROLÜN: Sen hem modern bir "Psikanalist" (Jung/Freud) hem de kadim bir "Rüya Tabircisi"sin.
 
@@ -74,7 +77,9 @@ RÜYA METNİ:
       final audioBytes = await file.readAsBytes();
 
       // 2. Promptu Hazırla
-      const promptText = """
+      final promptText = """
+${AppLocale.languageInstructionForAI}
+
 GÖREV: Ekli ses dosyasını dinle. Kullanıcı bir rüyasını anlatıyor.
 ROLÜN: Sen hem modern bir "Psikanalist" (Jung/Freud) hem de kadim bir "Rüya Tabircisi"sin.
 

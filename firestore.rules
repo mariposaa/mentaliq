@@ -39,9 +39,22 @@ service cloud.firestore {
       match /style_closet/{itemId} {
         allow read, write: if isSignedIn() && isOwner(userId);
       }
+      match /notifications/{notificationId} {
+        allow read, write: if isSignedIn() && isOwner(userId);
+      }
     }
 
-    // Astroloji ve Kozmik HUD Sonuçları
+    // Kullanıcı DNA (Natal Chart dahil)
+    match /user_dna/{userId} {
+      allow read, write: if isSignedIn() && isOwner(userId);
+    }
+
+    // Astroloji Günlük Yönergeler
+    match /astro_guidance/{userId}/{document=**} {
+      allow read, write: if isSignedIn() && isOwner(userId);
+    }
+
+    // Astroloji ve Kozmik HUD Sonuçları (eski sistem)
     match /astro_results/{userId}/{document=**} {
       allow read, write: if isSignedIn() && isOwner(userId);
     }
@@ -56,63 +69,28 @@ service cloud.firestore {
       allow read, write: if isSignedIn();
     }
 
-    // ==================== CAMPFIRE KURALLARI ====================
-    
-    // Helper: Kullanıcı bu cohort'un üyesi mi? (mevcut doküman için)
-    function isCohortMember(cohortId) {
-      return isSignedIn() && 
-             request.auth.uid in resource.data.members;
-    }
-    
-    // Helper: Parent cohort'un üyesi mi? (create işlemleri için)
-    function isParentCohortMember(cohortId) {
-      return isSignedIn() && 
-             request.auth.uid in get(/databases/$(database)/documents/campfire_cohorts/$(cohortId)).data.members;
-    }
-    
-    // Helper: Yeni cohort oluştururken kullanıcı kendisini members'a ekliyor mu?
-    function isCreatingOwnCohort() {
-      return isSignedIn() && 
-             request.auth.uid in request.resource.data.members;
-    }
-    
-    match /campfire_cohorts/{cohortId} {
-      // Cohort okuma: Sadece üyeler
-      allow read: if isCohortMember(cohortId);
-      
-      // Cohort oluşturma: Kullanıcı kendisini members'a eklemeli
-      allow create: if isCreatingOwnCohort();
-      
-      // Cohort güncelleme: Sadece üyeler
-      allow update: if isCohortMember(cohortId);
-      
-      // Cohort silme: Sadece Cloud Functions (kullanıcılar silemez)
-      allow delete: if false;
-      
-      match /lobby_interactions/{interactionId} {
-        // Lobby etkileşimleri okuma: Cohort üyeleri
-        allow read: if isCohortMember(cohortId);
-        // Lobby etkileşimleri oluşturma: Parent cohort üyesi olmalı
-        allow create: if isParentCohortMember(cohortId);
-        allow update, delete: if false;
+    // Kamp Ateşi - Forum
+    match /forum_posts/{postId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      // Yazar tam güncelleme/silme yapabilir; diğer kullanıcılar çeviri, destek ve yorum sayısı güncelleyebilir
+      allow update: if isSignedIn() && (
+        resource.data.authorId == request.auth.uid || 
+        request.resource.data.authorId == request.auth.uid ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['translations'])) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['supportedBy', 'supportCount'])) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount']))
+      );
+      allow delete: if isSignedIn() && resource.data.authorId == request.auth.uid;
+      match /comments/{commentId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn();
+        allow update, delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || request.resource.data.authorId == request.auth.uid);
       }
-      
-      match /sessions/{sessionId} {
-        // Session okuma/güncelleme: Cohort üyeleri
-        allow read, update: if isCohortMember(cohortId);
-        // Session oluşturma: Parent cohort üyesi olmalı (Cloud Functions da oluşturabilir)
-        allow create: if isParentCohortMember(cohortId);
-        allow delete: if false;
-        
-        match /messages/{messageId} {
-          // Mesaj okuma: Cohort üyeleri
-          allow read: if isCohortMember(cohortId);
-          // Mesaj gönderme: Parent cohort üyesi olmalı
-          allow create: if isParentCohortMember(cohortId);
-          // Mesajlar immutable (güncelleme/silme yok)
-          allow update, delete: if false;
-        }
-      }
+    }
+    match /forum_daily_questions/{qId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
     }
   }
 }

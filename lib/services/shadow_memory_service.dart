@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import '../config/app_locale.dart';
 import '../models/partner_model.dart';
 import 'partner_service.dart';
 import 'user_dna_service.dart';
@@ -86,7 +87,7 @@ Aşağıdaki kullanıcı mesajını analiz et. Amacın üç şeyi güncel tutmak
   static void initialize(String apiKey) {
     try {
       _model = GenerativeModel(
-        model: 'gemini-2.0-flash-exp',
+        model: 'gemini-2.5-flash',
         apiKey: apiKey,
         generationConfig: GenerationConfig(
           temperature: 0.3,
@@ -134,7 +135,8 @@ Kategori: ${category ?? 'genel'}
 $partnerInfo
 ''';
 
-      final response = await _model!.generateContent([Content.text(prompt)]);
+      final promptWithLang = '${AppLocale.languageInstructionForAI}\n\n$prompt';
+      final response = await _model!.generateContent([Content.text(promptWithLang)]);
       final responseText = response.text?.trim() ?? '';
 
       debugPrint('ShadowMemory raw response: $responseText');
@@ -268,7 +270,8 @@ ${targets.contains('goals') ? 'Hedefler (${currentDNA.goals?.length}): ${current
 }
 ''';
 
-      final response = await _model!.generateContent([Content.text(prompt)]);
+      final promptWithLang = '${AppLocale.languageInstructionForAI}\n\n$prompt';
+      final response = await _model!.generateContent([Content.text(promptWithLang)]);
       final updates = _parseResponse(response.text ?? '');
       
       if (updates != null) {

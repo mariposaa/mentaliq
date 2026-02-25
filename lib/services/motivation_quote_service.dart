@@ -4,6 +4,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import '../config/app_locale.dart';
 import '../models/goal_model.dart';
 import 'goal_service.dart';
 
@@ -49,7 +50,7 @@ KURALLAR:
   static void initialize(String apiKey) {
     try {
       _model = GenerativeModel(
-        model: 'gemini-2.0-flash-exp',
+        model: 'gemini-2.5-flash',
         apiKey: apiKey,
         generationConfig: GenerationConfig(
           temperature: 0.9, // Yaratıcılık için yüksek
@@ -98,7 +99,8 @@ KURALLAR:
           .replaceAll('{today_task}', todayTask)
           .replaceAll('{current_week}', currentWeek.toString());
 
-      final response = await _model!.generateContent([Content.text(prompt)]);
+      final promptWithLang = '${AppLocale.languageInstructionForAI}\n\n$prompt';
+      final response = await _model!.generateContent([Content.text(promptWithLang)]);
       final responseText = response.text?.trim() ?? '';
 
       debugPrint('MotivationQuote raw response: $responseText');

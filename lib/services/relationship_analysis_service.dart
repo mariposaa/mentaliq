@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:uuid/uuid.dart';
+import '../config/app_locale.dart';
 import '../models/relationship_analysis_model.dart';
 import 'auth_service.dart';
 import 'partner_service.dart';
@@ -49,7 +50,7 @@ Cevabı tam olarak şu anahtarlarla (keys) üret:
   static void initialize(String apiKey) {
     try {
       _model = GenerativeModel(
-        model: 'gemini-1.5-pro',
+        model: 'gemini-2.5-flash',
         apiKey: apiKey,
         generationConfig: GenerationConfig(
           temperature: 0.4, // Düşük - tutarlı JSON çıktısı
@@ -112,8 +113,8 @@ $dataPackage
 ''';
 
       debugPrint('AnalysisService: Sending analysis request...');
-      
-      final response = await _model!.generateContent([Content.text(fullPrompt)]);
+      final fullPromptWithLang = '${AppLocale.languageInstructionForAI}\n\n$fullPrompt';
+      final response = await _model!.generateContent([Content.text(fullPromptWithLang)]);
       final responseText = response.text?.trim() ?? '';
 
       debugPrint('AnalysisService raw response: $responseText');

@@ -3,6 +3,7 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import '../config/locale_utils.dart';
 import '../models/user_dna_model.dart';
 import 'auth_service.dart';
 
@@ -120,6 +121,10 @@ class UserDNAService {
           goals: updates.goals ?? _cachedDNA!.goals, // Replace if updated
           dynamicRelationships: _cachedDNA!.dynamicRelationships,
           lastUpdated: DateTime.now(),
+          willpowerIndex: _cachedDNA!.willpowerIndex,
+          activeAddictions: _cachedDNA!.activeAddictions,
+          recentInterventions: _cachedDNA!.recentInterventions,
+          language: _cachedDNA!.language,
         );
       }
       
@@ -183,6 +188,7 @@ class UserDNAService {
         dynamicRelationships: dnaData['dynamic_relationships'] != null 
             ? Map<String, dynamic>.from(dnaData['dynamic_relationships']) 
             : null,
+        language: dnaData['language'] as String?,
       );
 
     } catch (e) {
@@ -204,9 +210,15 @@ class UserDNAService {
     _cachedDNA = null;
   }
 
-  /// Initialize DNA on app start
+  /// Initialize DNA on app start; dil yoksa cihaz dilini UserDNA'ya yazar.
   static Future<void> initialize() async {
     await getDNA();
+    final hasLanguage = _cachedDNA?.language != null && _cachedDNA!.language!.isNotEmpty;
+    if (!hasLanguage && AuthService.userId != null) {
+      final code = LocaleUtils.detectFromDevice();
+      await updateDNA(UserDNAModel(language: code));
+      debugPrint('UserDNAService: Language set from device: $code');
+    }
     debugPrint('UserDNAService: Initialized with DNA: ${_cachedDNA?.toPromptContext()}');
   }
 }

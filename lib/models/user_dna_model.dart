@@ -21,6 +21,10 @@ class UserDNAModel {
   final List<String>? goals;
   final Map<String, dynamic>? dynamicRelationships;
   final DateTime? lastUpdated;
+  final double? willpowerIndex; // Global willpower
+  final List<AddictionDna>? activeAddictions; // The new main list
+  final List<InterventionLog>? recentInterventions;
+  final String? language; // tr, en, de, es, ar - uygulama dili (UserDNA'da kayıtlı)
 
   UserDNAModel({
     this.age,
@@ -42,6 +46,10 @@ class UserDNAModel {
     this.goals,
     this.dynamicRelationships,
     this.lastUpdated,
+    this.willpowerIndex,
+    this.activeAddictions,
+    this.recentInterventions,
+    this.language,
   });
 
   /// Firebase'den parse et
@@ -70,6 +78,14 @@ class UserDNAModel {
       lastUpdated: data['last_updated'] != null
           ? DateTime.parse(data['last_updated'] as String)
           : null,
+      willpowerIndex: (data['willpower_index'] as num?)?.toDouble(),
+      activeAddictions: data['active_addictions'] != null
+          ? (data['active_addictions'] as List).map((e) => AddictionDna.fromMap(e)).toList()
+          : null,
+      recentInterventions: data['recent_interventions'] != null
+          ? (data['recent_interventions'] as List).map((e) => InterventionLog.fromMap(e)).toList()
+          : null,
+      language: data['language'] as String?,
     );
   }
 
@@ -102,6 +118,10 @@ class UserDNAModel {
       if (goals != null && goals!.isNotEmpty) 'goals': goals,
       if (dynamicRelationships != null && dynamicRelationships!.isNotEmpty)
         'dynamic_relationships': dynamicRelationships,
+      if (willpowerIndex != null) 'willpower_index': willpowerIndex,
+      if (activeAddictions != null) 'active_addictions': activeAddictions!.map((e) => e.toMap()).toList(),
+      if (recentInterventions != null) 'recent_interventions': recentInterventions!.map((e) => e.toMap()).toList(),
+      if (language != null && language!.isNotEmpty) 'language': language,
       'last_updated': DateTime.now().toIso8601String(),
     };
   }
@@ -130,6 +150,10 @@ class UserDNAModel {
           ? {...?dynamicRelationships, ...updates.dynamicRelationships!}
           : dynamicRelationships,
       lastUpdated: DateTime.now(),
+      willpowerIndex: updates.willpowerIndex ?? willpowerIndex,
+      activeAddictions: updates.activeAddictions ?? activeAddictions,
+      recentInterventions: updates.recentInterventions ?? recentInterventions,
+      language: updates.language ?? language,
     );
   }
 
@@ -152,17 +176,25 @@ class UserDNAModel {
     if (age != null) baseInfo.add('$age yaşında');
     if (zodiac != null) baseInfo.add('$zodiac burcu');
     if (profession != null) baseInfo.add('Meslek: $profession');
-    if (mbti != null) baseInfo.add('Kişilik: $mbti');
-    if (relationshipStatus != null) baseInfo.add('İlişki: $relationshipStatus');
-    if (lifeStage != null) baseInfo.add('Yaşam evresi: $lifeStage');
+    if (willpowerIndex != null) baseInfo.add('Global İrade Gücü: ${(willpowerIndex! * 100).toInt()}%');
     if (baseInfo.isNotEmpty) parts.add('[KİMLİK]: ${baseInfo.join(" | ")}');
-    
-    // Doğum Bilgileri (Astroloji için)
-    final birthInfo = <String>[];
-    if (birthDate != null) birthInfo.add('Tarih: $birthDate');
-    if (birthTime != null) birthInfo.add('Saat: $birthTime');
-    if (birthLocation != null) birthInfo.add('Yer: $birthLocation');
-    if (birthInfo.isNotEmpty) parts.add('[DOĞUM]: ${birthInfo.join(" | ")}');
+
+    // Bağımlılık Profili (General & Gambling)
+    if (activeAddictions != null && activeAddictions!.isNotEmpty) {
+      for (var a in activeAddictions!) {
+        parts.add('[MÜCADELE: ${a.id.toUpperCase()}]');
+        parts.add(' - Temiz Gün: ${a.streakDays}');
+        parts.add(' - İrade Puanı: ${a.willpowerIndex}');
+        if (a.id == 'gambling') {
+             parts.add(' - KAYIP / RİSK VERİLERİ (AUDITOR İÇİN):');
+             parts.add('   * Toplam Kayıp: ${a.totalLostCapital}');
+             parts.add('   * Günlük Ortalama Bahis: ${a.averageDailyBet}');
+        }
+        if (a.currentMission.isNotEmpty) {
+           parts.add(' - Aktif Görev: ${a.currentMission} (Tamamlandı mı: ${a.isMissionCompleted})');
+        }
+      }
+    }
 
     // Psikolojik Derinlik
     if (personalityTraits != null && personalityTraits!.isNotEmpty) {
@@ -171,35 +203,20 @@ class UserDNAModel {
     if (traumas != null && traumas!.isNotEmpty) {
       parts.add('[TRAVMALAR]: ${traumas!.join(", ")}');
     }
-    if (fears != null && fears!.isNotEmpty) {
-      parts.add('[KORKULAR]: ${fears!.join(", ")}');
-    }
     if (triggers != null && triggers!.isNotEmpty) {
       parts.add('[TETİKLEYİCİLER]: ${triggers!.join(", ")}');
     }
     if (strengths != null && strengths!.isNotEmpty) {
       parts.add('[GÜÇLER]: ${strengths!.join(", ")}');
     }
-    if (goals != null && goals!.isNotEmpty) {
-      parts.add('[HEDEFLER]: ${goals!.join(", ")}');
-    }
     if (coreValues != null && coreValues!.isNotEmpty) {
       parts.add('[DEĞERLER]: ${coreValues!.join(", ")}');
-    }
-    if (hobbies != null && hobbies!.isNotEmpty) {
-      parts.add('[HOBİLER]: ${hobbies!.join(", ")}');
-    }
-
-    // İlişkisel Detaylar
-    if (dynamicRelationships != null && dynamicRelationships!.isNotEmpty) {
-      final relStrs = dynamicRelationships!.entries.map((e) => '${e.key}: ${e.value}');
-      parts.add('[İlişki Detayları]: ${relStrs.join(", ")}');
     }
 
     if (parts.isEmpty) return '';
     
     return '''
-### KULLANICI MASTER DNA (BU BİLGİLERİ BAĞLAMDA KULLAN AMA YÜZÜNE OKUMA):
+### KULLANICI MASTER DNA (BU BİLGİLERİ BAĞLAMDA KULLAN, YÜZÜNE VURMA):
 ${parts.join('\n')}
 -----------------------------------
 ''';
@@ -211,15 +228,106 @@ ${parts.join('\n')}
         profession == null &&
         mbti == null &&
         (personalityTraits == null || personalityTraits!.isEmpty) &&
-        (coreValues == null || coreValues!.isEmpty) &&
-        (fears == null || fears!.isEmpty) &&
-        (hobbies == null || hobbies!.isEmpty) &&
-        lifeStage == null &&
-        relationshipStatus == null &&
-        (traumas == null || traumas!.isEmpty) &&
-        (triggers == null || triggers!.isEmpty) &&
-        (strengths == null || strengths!.isEmpty) &&
-        (goals == null || goals!.isEmpty);
+        (activeAddictions == null || activeAddictions!.isEmpty);
   }
 }
 
+
+
+class InterventionLog {
+  final DateTime timestamp;
+  final String addictionType;
+  final String trigger;
+  final String outcome;
+
+  InterventionLog({
+    required this.timestamp,
+    required this.addictionType,
+    required this.trigger,
+    required this.outcome,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'timestamp': timestamp.toIso8601String(),
+      'addiction_type': addictionType,
+      'trigger': trigger,
+      'outcome': outcome,
+    };
+  }
+
+  factory InterventionLog.fromMap(Map<String, dynamic> map) {
+    return InterventionLog(
+      timestamp: DateTime.parse(map['timestamp']),
+      addictionType: map['addiction_type'] ?? '',
+      trigger: map['trigger'] ?? '',
+      outcome: map['outcome'] ?? '',
+    );
+  }
+}
+
+class AddictionDna {
+  final String id; // 'gambling', 'smoking', etc.
+  final String type; // 'behavioral', 'substance'
+  final double willpowerIndex;
+  
+  // KUMAR ÖZEL (The Auditor Verileri)
+  final double totalLostCapital; 
+  final double averageDailyBet; 
+  final List<DateTime> highRiskDays; 
+  
+  // GENEL / DİĞER (Bio-Hacker/Architect Verileri)
+  final int streakDays;
+  final List<String> triggers;
+  final DateTime? lastRelapse;
+  final String currentMission;
+  final bool isMissionCompleted;
+
+  AddictionDna({
+    required this.id,
+    required this.type,
+    this.willpowerIndex = 0.5,
+    this.totalLostCapital = 0.0,
+    this.averageDailyBet = 0.0,
+    this.highRiskDays = const [],
+    this.streakDays = 0,
+    this.triggers = const [],
+    this.lastRelapse,
+    this.currentMission = '',
+    this.isMissionCompleted = false,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'type': type,
+      'willpower_index': willpowerIndex,
+      'total_lost_capital': totalLostCapital,
+      'average_daily_bet': averageDailyBet,
+      'high_risk_days': highRiskDays.map((d) => d.toIso8601String()).toList(),
+      'streak_days': streakDays,
+      'triggers': triggers,
+      'last_relapse': lastRelapse?.toIso8601String(),
+      'current_mission': currentMission,
+      'is_mission_completed': isMissionCompleted,
+    };
+  }
+
+  factory AddictionDna.fromMap(Map<String, dynamic> map) {
+    return AddictionDna(
+      id: map['id'] ?? '',
+      type: map['type'] ?? '',
+      willpowerIndex: (map['willpower_index'] as num?)?.toDouble() ?? 0.5,
+      totalLostCapital: (map['total_lost_capital'] as num?)?.toDouble() ?? 0.0,
+      averageDailyBet: (map['average_daily_bet'] as num?)?.toDouble() ?? 0.0,
+      highRiskDays: map['high_risk_days'] != null 
+          ? (map['high_risk_days'] as List).map((e) => DateTime.parse(e)).toList() 
+          : [],
+      streakDays: map['streak_days'] ?? 0,
+      triggers: List<String>.from(map['triggers'] ?? []),
+      lastRelapse: map['last_relapse'] != null ? DateTime.parse(map['last_relapse']) : null,
+      currentMission: map['current_mission'] ?? '',
+      isMissionCompleted: map['is_mission_completed'] ?? false,
+    );
+  }
+}

@@ -11,6 +11,8 @@ class TokenService {
   static const int _astroCardTokenCost = 10; // Paylaşım kartı bedeli
   static const int _styleStrategyTokenCost = 10; // Stil stratejisi bedeli
   static const int _dreamTokenCost = 20; // Rüya analizi bedeli
+  static const int _campfireJoinTokenCost = 10; // Kamp atesi giris bedeli
+  static const int _campfireSessionTokenCost = 20; // Kamp atesi oturum bedeli
   static const int _astroGuidanceTokenCost = 15; // Günlük astroloji yönerge bedeli
   static const int _adRewardTokens = 30;
 
@@ -289,6 +291,18 @@ class TokenService {
     return balance >= _astroGuidanceTokenCost;
   }
 
+  /// Check if has enough tokens for Campfire join (10 tokens)
+  static Future<bool> hasEnoughTokensForCampfireJoin() async {
+    final balance = await getBalance();
+    return balance >= _campfireJoinTokenCost;
+  }
+
+  /// Check if has enough tokens for Campfire session (20 tokens)
+  static Future<bool> hasEnoughTokensForCampfireSession() async {
+    final balance = await getBalance();
+    return balance >= _campfireSessionTokenCost;
+  }
+
   /// Use tokens for Astro Guidance (15 tokens)
   static Future<bool> useTokensForAstroGuidance() async {
     try {
@@ -312,6 +326,16 @@ class TokenService {
       debugPrint('Error using tokens for Astro Guidance: $e');
       return false;
     }
+  }
+
+  /// Use tokens for Campfire join (10 tokens)
+  static Future<bool> useTokensForCampfireJoin() async {
+    return useTokensForTest(_campfireJoinTokenCost);
+  }
+
+  /// Use tokens for Campfire session (20 tokens)
+  static Future<bool> useTokensForCampfireSession() async {
+    return useTokensForTest(_campfireSessionTokenCost);
   }
 
   /// Use dynamic tokens for tests
@@ -346,4 +370,6 @@ class TokenService {
   static int get initialTokens => _initialTokens;
   static int get styleStrategyTokenCost => _styleStrategyTokenCost;
   static int get astroGuidanceTokenCost => _astroGuidanceTokenCost;
+  static int get campfireJoinCost => _campfireJoinTokenCost;
+  static int get campfireSessionCost => _campfireSessionTokenCost;
 }

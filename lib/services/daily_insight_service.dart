@@ -17,7 +17,7 @@ class DailyInsightService extends ChangeNotifier {
   bool get hasInsight => _insight.isNotEmpty;
 
   /// Load or fetch daily insight
-  Future<void> loadDailyInsight(GeminiService geminiService) async {
+  Future<void> loadDailyInsight() async {
     _isLoading = true;
     notifyListeners();
 
@@ -39,8 +39,8 @@ class DailyInsightService extends ChangeNotifier {
       }
       
       // Fetch new insight from Gemini
-      if (geminiService.isInitialized) {
-        final response = await geminiService.generateResponse(
+      if (GeminiService.isInitialized) {
+        final response = await GeminiService.generateResponse(
           _getDailyPrompt(),
           'genel',
         );
@@ -124,10 +124,10 @@ Format: [emoji] [mesaj]
   }
 
   /// Force refresh insight (ignore cache)
-  Future<void> refreshInsight(GeminiService geminiService) async {
+  Future<void> refreshInsight() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_cacheKey);
     await prefs.remove(_cacheDateKey);
-    await loadDailyInsight(geminiService);
+    await loadDailyInsight();
   }
 }

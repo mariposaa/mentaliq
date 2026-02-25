@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 import 'config/app_theme.dart';
+import 'config/app_locale.dart';
 import 'services/auth_service.dart';
 import 'services/gemini_service.dart';
 import 'services/shadow_memory_service.dart';
@@ -116,6 +118,13 @@ class MentaliqApp extends StatelessWidget {
       title: 'mentaliq',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      locale: AppLocale.locale,
+      supportedLocales: AppLocale.supportedLocales,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       home: const SplashScreen(),
     );
   }

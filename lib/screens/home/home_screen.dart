@@ -12,7 +12,12 @@ import '../rooms/astrology_dream_room_screen.dart';
 import '../rooms/style_room_screen.dart';
 import '../rooms/mind_atelier_room_screen.dart';
 import '../rooms/tests_room_screen.dart';
-import '../community/campfire_screen.dart';
+import '../modules/addiction_module_screen.dart';
+import '../community/campfire_forum_screen.dart';
+import '../notifications/notifications_screen.dart';
+import '../admin/admin_login_dialog.dart';
+import '../admin/admin_panel_screen.dart';
+import '../auth/auth_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,8 +27,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedNavIndex = 0;  // Bottom navigation index
-  
+  int _selectedNavIndex = 0;
   bool _isMoodBarExpanded = false;
   String? _selectedMoodId;  // Now stores mood ID, not emoji
   late TextEditingController _nameController;
@@ -77,6 +81,10 @@ class _HomeScreenState extends State<HomeScreen> {
   String _userName = 'Misafir';
   int _tokenBalance = 100;
 
+  // Admin: 5 tap on avatar opens password dialog
+  int _adminTapCount = 0;
+  Timer? _adminTapResetTimer;
+
   @override
   void initState() {
     super.initState();
@@ -128,7 +136,29 @@ class _HomeScreenState extends State<HomeScreen> {
     _nameController.dispose();
     _pageController.dispose();
     _timer?.cancel();
+    _adminTapResetTimer?.cancel();
     super.dispose();
+  }
+
+  void _onAdminTap() {
+    _adminTapResetTimer?.cancel();
+    _adminTapCount++;
+    if (_adminTapCount >= 5) {
+      _adminTapCount = 0;
+      showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => const AdminLoginDialog(),
+      ).then((value) {
+        if (value == true && mounted) {
+          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminPanelScreen()));
+        }
+      });
+      return;
+    }
+    _adminTapResetTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _adminTapCount = 0);
+    });
   }
 
   void _saveName() async {
@@ -153,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         backgroundColor: AppTheme.sandBeige,
-        body: _selectedNavIndex == 0 ? _buildHomeContent() : const CampfireScreen(),
+        body: _selectedNavIndex == 0 ? _buildHomeContent() : const CampfireForumScreen(),
         bottomNavigationBar: _buildBottomNav(),
       ),
     );
@@ -189,14 +219,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildNavItem(int index, IconData icon, String label) {
     final isSelected = _selectedNavIndex == index;
     final isCampfire = index == 1;
-    
     return GestureDetector(
       onTap: () => setState(() => _selectedNavIndex = index),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected 
+          color: isSelected
               ? (isCampfire ? AppTheme.terracotta.withOpacity(0.15) : AppTheme.sageGreen.withOpacity(0.15))
               : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
@@ -205,7 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Icon(
               icon,
-              color: isSelected 
+              color: isSelected
                   ? (isCampfire ? AppTheme.terracotta : AppTheme.sageGreen)
                   : AppTheme.mutedSage,
               size: 24,
@@ -214,7 +243,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(
               label,
               style: TextStyle(
-                color: isSelected 
+                color: isSelected
                     ? (isCampfire ? AppTheme.terracotta : AppTheme.sageGreen)
                     : AppTheme.mutedSage,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
@@ -275,20 +304,23 @@ class _HomeScreenState extends State<HomeScreen> {
           Expanded(
             child: Row(
               children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppTheme.sageGreen.withOpacity(0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      _userName.isNotEmpty ? _userName[0].toUpperCase() : 'M',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.sageGreen,
+                GestureDetector(
+                  onTap: _onAdminTap,
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: AppTheme.sageGreen.withOpacity(0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        _userName.isNotEmpty ? _userName[0].toUpperCase() : 'M',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.sageGreen,
+                        ),
                       ),
                     ),
                   ),
@@ -390,39 +422,73 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          // Token Display
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: AppTheme.warmCream,
-              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-              border: Border.all(color: AppTheme.softBorder),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: AppTheme.terracotta.withOpacity(0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Center(
-                    child: Text('✨', style: TextStyle(fontSize: 12)),
-                  ),
+          // Bildirim + Token
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                onPressed: () async {
+                  final changed = await Navigator.of(context).push<bool>(
+                    MaterialPageRoute(builder: (_) => const AuthScreen()),
+                  );
+                  if (changed == true) {
+                    await _loadUserData();
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Hesap guncellendi.')),
+                      );
+                    }
+                  }
+                },
+                icon: Icon(
+                  AuthService.isAnonymous ? Icons.person_add_alt_1_rounded : Icons.verified_user_rounded,
+                  color: AuthService.isAnonymous ? AppTheme.terracotta : AppTheme.sageGreen,
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  '$_tokenBalance',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                    color: AppTheme.forestCharcoal,
-                  ),
+                tooltip: AuthService.isAnonymous ? 'Hesap bagla' : 'Hesap yonetimi',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+              ),
+              IconButton(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+                icon: Icon(Icons.notifications_outlined, color: AppTheme.forestCharcoal),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+              ),
+              const SizedBox(width: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppTheme.warmCream,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                  border: Border.all(color: AppTheme.softBorder),
                 ),
-              ],
-            ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: AppTheme.terracotta.withOpacity(0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Center(
+                        child: Text('✨', style: TextStyle(fontSize: 12)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '$_tokenBalance',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                        color: AppTheme.forestCharcoal,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1266,9 +1332,8 @@ class _HomeScreenState extends State<HomeScreen> {
         MaterialPageRoute(builder: (context) => const MindAtelierRoomScreen()),
       );
     } else if (category == 'bagimliliklar') {
-      // Bağımlılıklarım - şimdilik genel chat ekranı
       Navigator.of(context).push(
-        MaterialPageRoute(builder: (context) => ChatScreen(category: category)),
+        MaterialPageRoute(builder: (context) => const AddictionModuleScreen()),
       );
     } else if (category == 'duygusal_destek') {
       // These use a general chat screen but with their specific personas

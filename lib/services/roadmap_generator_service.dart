@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import '../models/goal_model.dart';
+import '../config/app_locale.dart';
 import 'goal_service.dart';
 import 'user_dna_service.dart';
 
@@ -57,7 +58,7 @@ KRİTİK KURALLAR:
   static void initialize(String apiKey) {
     try {
       _model = GenerativeModel(
-        model: 'gemini-2.0-flash-exp',
+        model: 'gemini-2.5-flash',
         apiKey: apiKey,
         generationConfig: GenerationConfig(
           temperature: 0.7,
@@ -91,7 +92,8 @@ KRİTİK KURALLAR:
           .replaceAll('{special_notes}', goal.specialNotes ?? 'Yok')
           .replaceAll('{user_dna}', userDNA);
 
-      final response = await _model!.generateContent([Content.text(prompt)]);
+      final promptWithLang = '${AppLocale.languageInstructionForAI}\n\n$prompt';
+      final response = await _model!.generateContent([Content.text(promptWithLang)]);
       final responseText = response.text?.trim() ?? '';
 
       debugPrint('RoadmapGenerator raw response: $responseText');
