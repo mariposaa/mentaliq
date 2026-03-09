@@ -2,7 +2,7 @@ name: mentaliq
 description: "Mentaliq - Kişisel Gelişim ve Yapay Zeka Destekli Danışmanlık Uygulaması"
 publish_to: 'none'
 
-version: 1.0.0+10
+version: 1.0.0+11
 
 environment:
   sdk: ^3.5.4
@@ -66,6 +66,7 @@ dev_dependencies:
     sdk: flutter
 
   flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.3
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -110,3 +111,9 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  image_path: "C:/Users/Hp/.cursor/projects/c-Users-Hp-gemini-antigravity-scratch-mentaliq/assets/c__Users_Hp_AppData_Roaming_Cursor_User_workspaceStorage_81726b762d7f4ad67fd271e3a9ad0811_images_mentaliq_icon_1_ai_growth_1773096668567-removebg-preview-0f16d812-da03-44a7-bd8e-ce4040407905.png"
