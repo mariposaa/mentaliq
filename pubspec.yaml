@@ -2,7 +2,7 @@ name: mentaliq
 description: "Mentaliq - Kişisel Gelişim ve Yapay Zeka Destekli Danışmanlık Uygulaması"
 publish_to: 'none'
 
-version: 1.0.0+9
+version: 1.0.0+10
 
 environment:
   sdk: ^3.5.4
@@ -21,6 +21,7 @@ dependencies:
   google_sign_in: ^6.3.0
   cloud_firestore: ^5.5.0
   firebase_storage: ^12.3.6
+  firebase_messaging: ^15.1.6
   
   # AI - Gemini
   google_generative_ai: ^0.4.6
@@ -57,6 +58,8 @@ dependencies:
   http: ^1.6.0
   geolocator: ^12.0.0
   google_mobile_ads: ^7.0.0
+  timezone: ^0.11.0
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
@@ -78,6 +81,7 @@ flutter:
   assets:
     - .env
     - assets/images/
+    - assets/images/cats/
     - assets/animations/
     - assets/sounds/
 
