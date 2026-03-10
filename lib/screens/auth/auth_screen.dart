@@ -183,11 +183,12 @@ class _AuthScreenState extends State<AuthScreen> {
                   : Text(_isRegisterMode ? AppTranslations.get('emailSignUp') : AppTranslations.get('emailSignIn')),
             ),
             const SizedBox(height: 10),
-            OutlinedButton.icon(
-              onPressed: _isLoading ? null : _handleGoogle,
-              icon: const Icon(Icons.login_rounded),
-              label: Text(AppTranslations.get('continueWithGoogle')),
-            ),
+            if (Theme.of(context).platform != TargetPlatform.iOS)
+              OutlinedButton.icon(
+                onPressed: _isLoading ? null : _handleGoogle,
+                icon: const Icon(Icons.login_rounded),
+                label: Text(AppTranslations.get('continueWithGoogle')),
+              ),
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
