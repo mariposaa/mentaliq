@@ -247,6 +247,30 @@ class AuthService {
     }
   }
 
+  /// Delete account and wipe user data
+  static Future<bool> deleteAccount() async {
+    try {
+      final user = auth.currentUser;
+      if (user != null) {
+        // Delete user's document from Firestore
+        await firestore.collection('users').doc(user.uid).delete();
+        
+        // Delete auth account
+        await user.delete();
+        _currentUser = null;
+        
+        // Ensure sign out from Google if they used it
+        await _googleSignIn.signOut();
+        
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error deleting account: $e');
+      return false;
+    }
+  }
+
   static Future<void> _ensureUserDocument(User? user,
       {String? displayName}) async {
     if (user == null) return;

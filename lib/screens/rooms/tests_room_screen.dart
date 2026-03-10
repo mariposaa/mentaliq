@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
+import '../../config/responsive.dart';
 import '../../l10n/app_translations.dart';
-import '../../config/app_constants.dart';
-import '../chat/chat_screen.dart';
 import '../rooms/test_execution_screen.dart';
 import '../../data/test_data.dart';
 
@@ -11,6 +10,7 @@ class TestsRoomScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isCompact = context.isCompactPhone;
     return Scaffold(
       backgroundColor: AppTheme.sandBeige,
       appBar: AppBar(
@@ -26,12 +26,12 @@ class TestsRoomScreen extends StatelessWidget {
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: context.insetsAll(isCompact ? 14 : 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeaderCard(),
-            const SizedBox(height: 32),
+            SizedBox(height: isCompact ? 22 : 32),
             Text(
               AppTranslations.get('availableTests'),
               style: const TextStyle(
@@ -40,7 +40,7 @@ class TestsRoomScreen extends StatelessWidget {
                 color: AppTheme.forestCharcoal,
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: isCompact ? 12 : 16),
             _buildTestGrid(context),
           ],
         ),
@@ -112,6 +112,8 @@ class TestsRoomScreen extends StatelessWidget {
   }
 
   Widget _buildTestGrid(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final crossAxisCount = width <= 340 ? 1 : 2;
     final tests = [
       {
         'id': 'iq_testi',
@@ -166,11 +168,11 @@ class TestsRoomScreen extends StatelessWidget {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        childAspectRatio: 0.85,
+        childAspectRatio: width <= 390 ? 0.8 : 0.85,
       ),
       itemCount: tests.length,
       itemBuilder: (context, index) {
@@ -229,6 +231,8 @@ class TestsRoomScreen extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               test['title'],
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 15,
@@ -238,6 +242,9 @@ class TestsRoomScreen extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               test['subtitle'],
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 12,
                 color: AppTheme.mutedSage,

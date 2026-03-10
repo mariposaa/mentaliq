@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
+import '../../../config/responsive.dart';
 import '../../../l10n/app_translations.dart';
 import '../../../models/goal_model.dart';
 import '../../../services/goal_service.dart';
@@ -131,7 +132,7 @@ class _MotivationGoalsTabState extends State<MotivationGoalsTab>
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: context.insetsAll(context.isCompactPhone ? 12 : 16),
       child: Form(
         key: _formKey,
         child: Column(
@@ -177,9 +178,10 @@ class _MotivationGoalsTabState extends State<MotivationGoalsTab>
   }
 
   Widget _buildInfoCard() {
+    final isCompact = context.isCompactPhone;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(isCompact ? 12 : 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -198,8 +200,8 @@ class _MotivationGoalsTabState extends State<MotivationGoalsTab>
       child: Row(
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: isCompact ? 42 : 48,
+            height: isCompact ? 42 : 48,
             decoration: BoxDecoration(
               color: const Color(0xFF9C27B0).withOpacity(0.15),
               borderRadius: BorderRadius.circular(12),
@@ -208,15 +210,17 @@ class _MotivationGoalsTabState extends State<MotivationGoalsTab>
               child: Text('🚀', style: TextStyle(fontSize: 24)),
             ),
           ),
-          const SizedBox(width: 14),
+          SizedBox(width: isCompact ? 10 : 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   _existingGoal != null ? AppTranslations.get('updateGoal') : AppTranslations.get('defineGoal'),
-                  style: const TextStyle(
-                    fontSize: 16,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: isCompact ? 14 : 16,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF9C27B0),
                   ),
@@ -224,8 +228,10 @@ class _MotivationGoalsTabState extends State<MotivationGoalsTab>
                 const SizedBox(height: 4),
                 Text(
                   AppTranslations.get('goalInfoDesc'),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: isCompact ? 11 : 12,
                     color: AppTheme.mutedSage,
                   ),
                 ),
@@ -337,8 +343,9 @@ class _MotivationGoalsTabState extends State<MotivationGoalsTab>
   }
 
   Widget _buildTimeSlider() {
+    final isCompact = context.isCompactPhone;
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(isCompact ? 12 : 16),
       decoration: BoxDecoration(
         color: AppTheme.warmCream,
         borderRadius: BorderRadius.circular(12),
@@ -351,8 +358,10 @@ class _MotivationGoalsTabState extends State<MotivationGoalsTab>
             children: [
               Text(
                 AppTranslations.get('dailyHoursQuestion'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: isCompact ? 12 : 13,
                   color: AppTheme.forestCharcoal,
                 ),
               ),

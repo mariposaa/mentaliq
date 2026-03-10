@@ -1,10 +1,11 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../config/app_theme.dart';
+import '../../config/responsive.dart';
 import '../../l10n/app_translations.dart';
 import '../../services/forum_service.dart';
+import '../../widgets/responsive_card.dart';
 
 const int _kMaxPostLength = 150;
 
@@ -31,11 +32,13 @@ class _CampfireShareTabState extends State<CampfireShareTab> {
   Widget _buildTypeButton(String type, String emoji, String label) {
     final isSelected = _postType == type;
     final color = AppTheme.postTypeColor(type);
-    return Expanded(
+    final maxWidth = (MediaQuery.sizeOf(context).width - 56) / 2;
+    return SizedBox(
+      width: maxWidth < 170 ? maxWidth : 170,
       child: GestureDetector(
         onTap: () => setState(() => _postType = type),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
           decoration: BoxDecoration(
             color: isSelected ? color.withOpacity(0.15) : AppTheme.warmCream,
             borderRadius: BorderRadius.circular(10),
@@ -45,7 +48,13 @@ class _CampfireShareTabState extends State<CampfireShareTab> {
             children: [
               Text(emoji, style: const TextStyle(fontSize: 20)),
               const SizedBox(height: 4),
-              Text(label, style: TextStyle(fontSize: 10, fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal, color: isSelected ? color : AppTheme.mutedSage)),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 10, fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal, color: isSelected ? color : AppTheme.mutedSage),
+              ),
             ],
           ),
         ),
@@ -98,31 +107,32 @@ class _CampfireShareTabState extends State<CampfireShareTab> {
 
   @override
   Widget build(BuildContext context) {
+    final isCompact = context.isCompactPhone;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isCompact ? 14 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(AppTranslations.get('postType'), style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppTheme.forestCharcoal)),
           const SizedBox(height: 8),
           // Tür seçimi - 3 buton
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
               _buildTypeButton('confession', '🤫', AppTranslations.get('confessionType')),
-              const SizedBox(width: 8),
               _buildTypeButton('photo_story', '📸', AppTranslations.get('photoStoryType')),
-              const SizedBox(width: 8),
               _buildTypeButton('idea_question', '💡', AppTranslations.get('ideaQuestionType')),
             ],
           ),
           const SizedBox(height: 12),
           // Seçili tür önizlemesi
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppTheme.postTypeColor(_postType).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppTheme.postTypeColor(_postType).withOpacity(0.3)),
+          ResponsiveCard(
+            padding: 12,
+            color: AppTheme.postTypeColor(_postType).withOpacity(0.1),
+            radius: 12,
+            border: Border.all(
+              color: AppTheme.postTypeColor(_postType).withOpacity(0.3),
             ),
             child: Row(
               children: [
@@ -132,8 +142,18 @@ class _CampfireShareTabState extends State<CampfireShareTab> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(AppTheme.postTypeLabel(_postType), style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.postTypeColor(_postType))),
-                      Text(_getTypeDescription(_postType), style: TextStyle(fontSize: 11, color: AppTheme.mutedSage)),
+                      Text(
+                        AppTheme.postTypeLabel(_postType),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.postTypeColor(_postType)),
+                      ),
+                      Text(
+                        _getTypeDescription(_postType),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 11, color: AppTheme.mutedSage),
+                      ),
                     ],
                   ),
                 ),

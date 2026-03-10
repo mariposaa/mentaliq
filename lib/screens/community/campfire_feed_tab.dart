@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../config/app_locale.dart';
 import '../../config/app_theme.dart';
+import '../../config/responsive.dart';
 import '../../l10n/app_translations.dart';
 import '../../models/forum_post.dart';
 import '../../services/auth_service.dart';
@@ -14,6 +15,7 @@ class CampfireFeedTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isCompact = context.isCompactPhone;
     return StreamBuilder<List<ForumPost>>(
       stream: ForumService.watchFeedPosts(),
       builder: (context, snap) {
@@ -35,34 +37,33 @@ class CampfireFeedTab extends StatelessWidget {
             ),
           );
         }
-        return ListView.builder(
-          padding: const EdgeInsets.all(12),
-          itemCount: (list.length + 2) ~/ 3,
-          itemBuilder: (_, rowIndex) {
-            final start = rowIndex * 3;
-            final posts = <ForumPost>[
-              list[start],
-              if (start + 1 < list.length) list[start + 1],
-              if (start + 2 < list.length) list[start + 2],
-            ];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (var i = 0; i < posts.length; i++) ...[
-                      if (i > 0) const SizedBox(width: 8),
-                      Expanded(
-                        child: _PostCard(
-                          post: posts[i],
-                          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => CampfirePostDetailScreen(postId: posts[i].id))),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            final crossAxisCount = width <= 340 ? 1 : (width <= 430 ? 2 : 3);
+            final itemWidth =
+                (width - 24 - ((crossAxisCount - 1) * 8)) / crossAxisCount;
+            final aspectRatio = itemWidth <= 150 ? 0.54 : (isCompact ? 0.6 : 0.64);
+            return GridView.builder(
+              padding: const EdgeInsets.all(12),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 10,
+                childAspectRatio: aspectRatio,
               ),
+              itemCount: list.length,
+              itemBuilder: (_, index) {
+                final post = list[index];
+                return _PostCard(
+                  post: post,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => CampfirePostDetailScreen(postId: post.id),
+                    ),
+                  ),
+                );
+              },
             );
           },
         );
@@ -165,7 +166,14 @@ class _PostCardState extends State<_PostCard> {
                   children: [
                     Text(AppTheme.postTypeEmoji(post.postType), style: const TextStyle(fontSize: 10)),
                     const SizedBox(width: 3),
-                    Text(AppTheme.postTypeLabel(post.postType), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: AppTheme.postTypeColor(post.postType))),
+                    Flexible(
+                      child: Text(
+                        AppTheme.postTypeLabel(post.postType),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: AppTheme.postTypeColor(post.postType)),
+                      ),
+                    ),
                   ],
                 ),
               ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
+import '../../config/responsive.dart';
 import '../../l10n/app_translations.dart';
 import '../../models/test_model.dart';
 import '../../services/gemini_service.dart';
@@ -108,6 +109,7 @@ Lütfen bu şablonun ötesine geçerek derin analiz yap.
 
   @override
   Widget build(BuildContext context) {
+    final isCompact = context.isCompactPhone;
     if (!_tokensDeducted && _analysisResult == null) {
       return Scaffold(
         backgroundColor: AppTheme.sandBeige,
@@ -134,14 +136,22 @@ Lütfen bu şablonun ötesine geçerek derin analiz yap.
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text(widget.test.title, style: const TextStyle(color: AppTheme.forestCharcoal, fontSize: 16)),
+        title: Text(
+          widget.test.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: AppTheme.forestCharcoal,
+            fontSize: isCompact ? 14 : 16,
+          ),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.close, color: AppTheme.forestCharcoal),
           onPressed: () => Navigator.pop(context),
         ),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: EdgeInsets.all(isCompact ? 14 : 24),
         child: Column(
           children: [
             LinearProgressIndicator(
@@ -151,7 +161,7 @@ Lütfen bu şablonun ötesine geçerek derin analiz yap.
               borderRadius: BorderRadius.circular(10),
               minHeight: 8,
             ),
-            const SizedBox(height: 40),
+            SizedBox(height: isCompact ? 24 : 40),
             Text(
               '${AppTranslations.get('question')} ${_currentQuestionIndex + 1}/${widget.test.questions.length}',
               style: const TextStyle(color: AppTheme.mutedSage, fontWeight: FontWeight.bold),
@@ -160,9 +170,13 @@ Lütfen bu şablonun ötesine geçerek derin analiz yap.
             Text(
               question.text,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.forestCharcoal),
+              style: TextStyle(
+                fontSize: isCompact ? 18 : 20,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.forestCharcoal,
+              ),
             ),
-            const SizedBox(height: 48),
+            SizedBox(height: isCompact ? 28 : 48),
             ...question.options.map((opt) => _buildOptionButton(question, opt)),
           ],
         ),
@@ -171,13 +185,14 @@ Lütfen bu şablonun ötesine geçerek derin analiz yap.
   }
 
   Widget _buildOptionButton(TestQuestion question, TestOption opt) {
+    final isCompact = context.isCompactPhone;
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: GestureDetector(
         onTap: () => _handleAnswer(question, opt),
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(isCompact ? 14 : 20),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
@@ -189,7 +204,13 @@ Lütfen bu şablonun ötesine geçerek derin analiz yap.
           child: Text(
             opt.text,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 16, color: AppTheme.forestCharcoal, fontWeight: FontWeight.w500),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: isCompact ? 14 : 16,
+              color: AppTheme.forestCharcoal,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
       ),
@@ -197,11 +218,15 @@ Lütfen bu şablonun ötesine geçerek derin analiz yap.
   }
 
   Widget _buildResultScreen() {
+    final isCompact = context.isCompactPhone;
     return Scaffold(
       backgroundColor: AppTheme.sandBeige,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          padding: EdgeInsets.symmetric(
+            horizontal: isCompact ? 14 : 24,
+            vertical: isCompact ? 20 : 32,
+          ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

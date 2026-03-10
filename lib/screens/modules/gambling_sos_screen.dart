@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../config/app_theme.dart';
+import '../../config/responsive.dart';
 import '../../services/addiction_service.dart';
 import '../../l10n/app_translations.dart';
 
@@ -71,8 +71,9 @@ class _GamblingSOSScreenState extends State<GamblingSOSScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isCompact = context.isCompactPhone;
     // Compatibility fallback: old gamblingDNA photo model was removed.
-    final photoUrl = '';
+    const photoUrl = '';
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -80,7 +81,7 @@ class _GamblingSOSScreenState extends State<GamblingSOSScreen> {
         fit: StackFit.expand,
         children: [
           // 1. VISUAL SHOCK LAYER (Background Photo with BW Filter)
-          if (photoUrl != null && photoUrl.isNotEmpty)
+          if (photoUrl.isNotEmpty)
             ColorFiltered(
               colorFilter: const ColorFilter.mode(
                 Colors.grey,
@@ -101,13 +102,16 @@ class _GamblingSOSScreenState extends State<GamblingSOSScreen> {
           // 2. CONTENT LAYER
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(30),
+              padding: EdgeInsets.all(isCompact ? 16 : 30),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // Timer Box
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isCompact ? 20 : 30,
+                      vertical: isCompact ? 12 : 15,
+                    ),
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.redAccent, width: 2),
                       borderRadius: BorderRadius.circular(12),
@@ -117,18 +121,18 @@ class _GamblingSOSScreenState extends State<GamblingSOSScreen> {
                       _timerString,
                       style: const TextStyle(
                         fontFamily: 'Courier', // Monospace for countdown feel
-                        fontSize: 48,
+                        fontSize: 44,
                         fontWeight: FontWeight.bold,
                         color: Colors.redAccent,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 40),
+                  SizedBox(height: isCompact ? 20 : 40),
                   
                   // Reality Checks & Chat Interface
                   Expanded(
                     child: Container(
-                      padding: const EdgeInsets.all(20),
+                      padding: EdgeInsets.all(isCompact ? 14 : 20),
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.8),
                         borderRadius: BorderRadius.circular(16),
@@ -144,9 +148,9 @@ class _GamblingSOSScreenState extends State<GamblingSOSScreen> {
                                   child: Text(
                                     _realityChecks[index],
                                     textAlign: TextAlign.center,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       color: Colors.white,
-                                      fontSize: 18,
+                                      fontSize: isCompact ? 16 : 18,
                                       fontWeight: FontWeight.w600,
                                       height: 1.4,
                                     ),
@@ -168,8 +172,10 @@ class _GamblingSOSScreenState extends State<GamblingSOSScreen> {
                   const SizedBox(height: 20),
                   
                   // Action Buttons
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  Wrap(
+                    alignment: WrapAlignment.spaceEvenly,
+                    spacing: 14,
+                    runSpacing: 10,
                     children: [
                       _buildActionButton(
                         icon: Icons.call,
@@ -212,7 +218,7 @@ class _GamblingSOSScreenState extends State<GamblingSOSScreen> {
                         isPrimary: true,
                       ),
                     ],
-                  )
+                  ),
                 ],
               ),
             ),
@@ -225,7 +231,9 @@ class _GamblingSOSScreenState extends State<GamblingSOSScreen> {
   Widget _buildActionButton({required IconData icon, required String label, required VoidCallback onTap, bool isPrimary = false}) {
     return GestureDetector(
       onTap: onTap,
-      child: Column(
+      child: SizedBox(
+        width: 100,
+        child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(16),
@@ -238,9 +246,13 @@ class _GamblingSOSScreenState extends State<GamblingSOSScreen> {
           const SizedBox(height: 8),
           Text(
             label,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
         ],
+        ),
       ),
     );
   }

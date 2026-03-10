@@ -52,6 +52,11 @@ class AppTranslations {
       'done': 'Done',
       'saving': 'Saving...',
       'today': 'Today',
+      'settings': 'Settings',
+      'privacyPolicy': 'Privacy Policy',
+      'termsOfService': 'Terms of Service',
+      'deleteAccount': 'Delete Account',
+      'deleteAccountConfirm': 'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently cleared.',
 
       // ── Language ──
       'language': 'Language',
@@ -713,6 +718,11 @@ class AppTranslations {
       'done': 'Tamam',
       'saving': 'Kaydediliyor...',
       'today': 'Bugün',
+      'settings': 'Ayarlar',
+      'privacyPolicy': 'Gizlilik Politikası',
+      'termsOfService': 'Kullanım Şartları',
+      'deleteAccount': 'Hesabı Sil',
+      'deleteAccountConfirm': 'Hesabınızı silmek istediğinize emin misiniz? Bu işlem geri alınamaz ve tüm verileriniz kalıcı olarak temizlenecektir.',
       'language': 'Dil',
       'selectLanguage': 'Dil Seçin',
       'howAreYouFeeling': 'Bugün nasıl hissediyorsun?',

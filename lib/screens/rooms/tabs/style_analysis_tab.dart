@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import '../../../config/app_theme.dart';
+import '../../../config/responsive.dart';
 import '../../../models/style_item.dart';
 import '../../../models/style_outfit_record.dart';
 import '../../../services/style_analysis_service.dart';
@@ -8,6 +9,7 @@ import '../../../services/style_outfit_history_service.dart';
 import '../../../services/token_service.dart';
 import '../../../services/ad_service.dart';
 import '../../../l10n/app_translations.dart';
+import '../../../widgets/responsive_card.dart';
 
 class StyleAnalysisTab extends StatefulWidget {
   const StyleAnalysisTab({super.key});
@@ -241,14 +243,13 @@ class _StyleAnalysisTabState extends State<StyleAnalysisTab> {
   }
 
   Widget _buildInputSection() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: AppTheme.cardShadow,
-        border: Border.all(color: AppTheme.softBorder),
-      ),
+    final isCompact = context.isCompactPhone;
+    return ResponsiveCard(
+      padding: isCompact ? 14 : 20,
+      color: Colors.white,
+      radius: 24,
+      shadow: AppTheme.cardShadow,
+      border: Border.all(color: AppTheme.softBorder),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -269,7 +270,9 @@ class _StyleAnalysisTabState extends State<StyleAnalysisTab> {
           const SizedBox(height: 20),
           Text(AppTranslations.get('recommendationMode'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.mutedSage)),
           const SizedBox(height: 8),
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
               _buildSelectionChip(AppTranslations.get('onlyArchive'), !_isHybrid, (val) => setState(() => _isHybrid = false)),
               _buildSelectionChip(AppTranslations.get('hybridMode'), _isHybrid, (val) => setState(() => _isHybrid = true)),
@@ -287,7 +290,9 @@ class _StyleAnalysisTabState extends State<StyleAnalysisTab> {
           const SizedBox(height: 12),
           Text(AppTranslations.get('temperature'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.mutedSage)),
           const SizedBox(height: 8),
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: _tempList.map((t) => _buildSelectionChip(t, _selectedTemp == t, (val) => setState(() => _selectedTemp = t))).toList(),
           ),
           const SizedBox(height: 24),
@@ -311,10 +316,12 @@ class _StyleAnalysisTabState extends State<StyleAnalysisTab> {
   }
 
   Widget _buildSelectionChip(String label, bool isSelected, Function(bool) onSelect) {
+    final maxChipWidth = MediaQuery.sizeOf(context).width * 0.78;
     return GestureDetector(
       onTap: () => onSelect(!isSelected),
       child: Container(
         margin: const EdgeInsets.only(right: 8),
+        constraints: BoxConstraints(maxWidth: maxChipWidth),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected ? AppTheme.terracotta : AppTheme.warmCream,
@@ -323,6 +330,8 @@ class _StyleAnalysisTabState extends State<StyleAnalysisTab> {
         ),
         child: Text(
           label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             color: isSelected ? Colors.white : AppTheme.forestCharcoal,
             fontSize: 11,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
+import '../../config/responsive.dart';
 import '../../l10n/app_translations.dart';
 import 'tabs/relationship_chat_tab.dart';
 import 'tabs/relationship_tests_tab.dart';
@@ -68,8 +69,12 @@ class _RelationshipRoomScreenState extends State<RelationshipRoomScreen>
   }
 
   Widget _buildHeader() {
+    final isCompact = context.isCompactPhone;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+      padding: EdgeInsets.symmetric(
+        horizontal: isCompact ? 6 : 8,
+        vertical: 12,
+      ),
       child: Row(
         children: [
           IconButton(
@@ -95,12 +100,17 @@ class _RelationshipRoomScreenState extends State<RelationshipRoomScreen>
               children: [
                 Text(
                   AppTranslations.get('relationshipSupport'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
+                        fontSize: isCompact ? 15 : null,
                       ),
                 ),
                 Text(
                   AppTranslations.get('romanticRelationships'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppTheme.mutedSage,
                       ),
@@ -114,8 +124,9 @@ class _RelationshipRoomScreenState extends State<RelationshipRoomScreen>
   }
 
   Widget _buildTabBar() {
+    final isCompact = context.isCompactPhone;
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: EdgeInsets.symmetric(horizontal: isCompact ? 12 : 16, vertical: 8),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: AppTheme.warmCream,
@@ -125,6 +136,8 @@ class _RelationshipRoomScreenState extends State<RelationshipRoomScreen>
       ),
       child: TabBar(
         controller: _tabController,
+        isScrollable: true,
+        tabAlignment: TabAlignment.start,
         indicator: BoxDecoration(
           color: AppTheme.sageGreen,
           borderRadius: BorderRadius.circular(10),
@@ -150,13 +163,13 @@ class _RelationshipRoomScreenState extends State<RelationshipRoomScreen>
         indicatorSize: TabBarIndicatorSize.tab,
         splashBorderRadius: BorderRadius.circular(10),
         tabs: _tabs.map((tab) => Tab(
-          height: 40,
+          height: isCompact ? 36 : 40,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(tab.icon, size: 16),
-              const SizedBox(width: 4),
+              Icon(tab.icon, size: isCompact ? 14 : 16),
+              SizedBox(width: isCompact ? 3 : 4),
               Flexible(
                 child: Text(
                   tab.label,

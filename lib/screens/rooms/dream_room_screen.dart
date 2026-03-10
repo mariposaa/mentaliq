@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import '../../config/responsive.dart';
 import '../../l10n/app_translations.dart';
 import '../../models/dream_model.dart';
 import '../../services/ad_service.dart';
@@ -244,8 +245,9 @@ class _DreamRoomScreenState extends State<DreamRoomScreen> {
   }
 
   Widget _buildHeader() {
+    final isCompact = context.isCompactPhone;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: isCompact ? 14 : 20, vertical: 12),
       child: Row(
         children: [
           IconButton(
@@ -262,21 +264,25 @@ class _DreamRoomScreenState extends State<DreamRoomScreen> {
             ),
             child: const Center(child: Text('🌙', style: TextStyle(fontSize: 22))),
           ),
-          const SizedBox(width: 14),
+          SizedBox(width: isCompact ? 10 : 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   AppTranslations.get('dreamInterpretation'),
-                  style: const TextStyle(
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 20,
+                    fontSize: isCompact ? 18 : 20,
                     color: Colors.white,
                   ),
                 ),
                 Text(
                   AppTranslations.get('dreamInterpretationTitle'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white38,
                     fontSize: 11,
@@ -383,9 +389,10 @@ class _DreamRoomScreenState extends State<DreamRoomScreen> {
   }
 
   Widget _buildDreamResultView() {
+    final isCompact = context.isCompactPhone;
     final data = _dreamData!;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isCompact ? 14 : 20),
       child: Column(
         children: [
           Stack(
@@ -426,9 +433,11 @@ class _DreamRoomScreenState extends State<DreamRoomScreen> {
           const SizedBox(height: 20),
           Text(
             data.dreamTitle,
-            style: const TextStyle(
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
               color: Colors.white,
-              fontSize: 28,
+              fontSize: isCompact ? 24 : 28,
               fontWeight: FontWeight.bold,
               fontStyle: FontStyle.italic,
             ),

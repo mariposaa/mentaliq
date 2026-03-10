@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
+import '../../config/responsive.dart';
 import '../../l10n/app_translations.dart';
 import '../../models/user_dna_model.dart';
 import '../../services/addiction_service.dart';
@@ -49,16 +50,20 @@ class _AddictionModuleScreenState extends State<AddictionModuleScreen> {
   }
 
   Widget _buildAppBar() {
+    final isCompact = context.isCompactPhone;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+      padding: EdgeInsets.fromLTRB(isCompact ? 12 : 16, 12, 8, 8),
       child: Row(
         children: [
-          const Expanded(
+          Expanded(
             child: Text(
               'MENTALIQ / BAGIMLILIK DESTEK',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: AppTheme.forestCharcoal,
                 fontWeight: FontWeight.w700,
+                fontSize: isCompact ? 12 : 14,
                 letterSpacing: 0.8,
               ),
             ),
@@ -84,11 +89,15 @@ class _AddictionModuleScreenState extends State<AddictionModuleScreen> {
     ];
 
     return ListView(
-      padding: const EdgeInsets.all(20),
+      padding: context.insetsAll(context.isCompactPhone ? 14 : 20),
       children: [
-        const Text(
+        Text(
           'Aktif + proaktif destek',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.forestCharcoal),
+          style: TextStyle(
+            fontSize: context.isCompactPhone ? 19 : 22,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.forestCharcoal,
+          ),
         ),
         const SizedBox(height: 8),
         const Text(
@@ -313,7 +322,7 @@ class _ActiveAddictionViewState extends State<_ActiveAddictionView> {
     return RefreshIndicator(
       onRefresh: _refresh,
       child: ListView(
-        padding: const EdgeInsets.all(18),
+        padding: context.insetsAll(context.isCompactPhone ? 14 : 18),
         children: [
           _riskCard(),
           const SizedBox(height: 14),
@@ -355,11 +364,15 @@ class _ActiveAddictionViewState extends State<_ActiveAddictionView> {
             children: [
               const Icon(Icons.insights, color: AppTheme.terracotta),
               const SizedBox(width: 8),
-              Text(
-                'Durum: ${_snapshot!.modeLabel}',
-                style: const TextStyle(fontWeight: FontWeight.bold),
+              Expanded(
+                child: Text(
+                  'Durum: ${_snapshot!.modeLabel}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               Text(
                 'Risk ${_snapshot!.riskScore}/100',
                 style: const TextStyle(fontWeight: FontWeight.w700),

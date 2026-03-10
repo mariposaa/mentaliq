@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
+import '../../config/responsive.dart';
 import '../../l10n/app_translations.dart';
 import 'tabs/mind_atelier_chat_tab.dart'; // Yeni oluşturulacak
 import 'tabs/mind_atelier_dna_tab.dart';  // Yeni oluşturulacak
@@ -56,6 +57,7 @@ class _MindAtelierRoomScreenState extends State<MindAtelierRoomScreen> with Sing
   }
 
   Widget _buildHeader() {
+    final isCompact = context.isCompactPhone;
     return Column(
       children: [
         Stack(
@@ -94,7 +96,7 @@ class _MindAtelierRoomScreenState extends State<MindAtelierRoomScreen> with Sing
           ],
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          padding: EdgeInsets.symmetric(horizontal: isCompact ? 14 : 20, vertical: 8),
           child: Row(
             children: [
               Container(
@@ -108,20 +110,25 @@ class _MindAtelierRoomScreenState extends State<MindAtelierRoomScreen> with Sing
                   child: Text('🌱', style: TextStyle(fontSize: 22)),
                 ),
               ),
-              const SizedBox(width: 14),
+              SizedBox(width: isCompact ? 10 : 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       AppTranslations.get('personaPsychology'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: AppTheme.forestCharcoal,
+                            fontSize: isCompact ? 22 : null,
                           ),
                     ),
                     Text(
                       AppTranslations.get('mentalBalanceAnalysis'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppTheme.mutedSage,
                             letterSpacing: 0.5,
@@ -138,8 +145,9 @@ class _MindAtelierRoomScreenState extends State<MindAtelierRoomScreen> with Sing
   }
 
   Widget _buildTabBar() {
+    final isCompact = context.isCompactPhone;
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: EdgeInsets.symmetric(horizontal: isCompact ? 12 : 16, vertical: 8),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: AppTheme.warmCream,
@@ -149,6 +157,8 @@ class _MindAtelierRoomScreenState extends State<MindAtelierRoomScreen> with Sing
       ),
       child: TabBar(
         controller: _tabController,
+        isScrollable: true,
+        tabAlignment: TabAlignment.start,
         indicator: BoxDecoration(
           color: AppTheme.sageGreen,
           borderRadius: BorderRadius.circular(10),
@@ -158,13 +168,13 @@ class _MindAtelierRoomScreenState extends State<MindAtelierRoomScreen> with Sing
         indicatorSize: TabBarIndicatorSize.tab,
         dividerColor: Colors.transparent,
         tabs: _tabs.map((tab) => Tab(
-          height: 40,
+          height: isCompact ? 36 : 40,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(tab.icon, size: 16),
-              const SizedBox(width: 6),
-              Text(tab.label, style: const TextStyle(fontSize: 12)),
+              Icon(tab.icon, size: isCompact ? 14 : 16),
+              SizedBox(width: isCompact ? 4 : 6),
+              Text(tab.label, style: TextStyle(fontSize: isCompact ? 11 : 12)),
             ],
           ),
         )).toList(),

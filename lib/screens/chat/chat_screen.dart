@@ -10,6 +10,7 @@ import '../../services/token_service.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
 import '../../l10n/app_translations.dart';
+import '../../config/responsive.dart';
 
 import 'package:audioplayers/audioplayers.dart';
 import '../../widgets/compassionate_background.dart';
@@ -429,6 +430,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isCompact = context.isCompactPhone;
     final categoryName = AppConstants.categoryNames[widget.category] ?? widget.category;
     final categoryIcon = AppConstants.categoryIcons[widget.category] ?? '🌿';
     
@@ -444,7 +446,10 @@ class _ChatScreenState extends State<ChatScreen> {
             children: [
               // Header
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isCompact ? 4 : 8,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   // Transparent header if background is active
                   color: (isCompassionateZone && _currentAtmosphere != AtmosphereType.none) 
@@ -462,8 +467,8 @@ class _ChatScreenState extends State<ChatScreen> {
                             : AppTheme.forestCharcoal,
                       ),
                     Container(
-                      width: 40,
-                      height: 40,
+                      width: isCompact ? 36 : 40,
+                      height: isCompact ? 36 : 40,
                       decoration: BoxDecoration(
                         color: AppTheme.sageGreen.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(12),
@@ -472,15 +477,18 @@ class _ChatScreenState extends State<ChatScreen> {
                         child: Text(categoryIcon, style: const TextStyle(fontSize: 20)),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: isCompact ? 8 : 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             categoryName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w600,
+                                  fontSize: isCompact ? 15 : null,
                                   color: (_currentAtmosphere != AtmosphereType.none && isCompassionateZone) 
                                       ? Colors.white 
                                       : AppTheme.forestCharcoal,
@@ -499,6 +507,8 @@ class _ChatScreenState extends State<ChatScreen> {
                               const SizedBox(width: 6),
                               Text(
                                 _isLoading ? AppTranslations.get('thinking') : AppTranslations.get('listeningStatus'),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                       color: (_currentAtmosphere != AtmosphereType.none && isCompassionateZone) 
                                           ? Colors.white70 
@@ -516,8 +526,11 @@ class _ChatScreenState extends State<ChatScreen> {
                       GestureDetector(
                         onTap: _showAtmospherePanel,
                         child: Container(
-                          margin: const EdgeInsets.only(right: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          margin: const EdgeInsets.only(right: 6),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isCompact ? 8 : 12,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             color: _isMusicPlaying 
                                 ? AppTheme.terracotta 
@@ -532,8 +545,10 @@ class _ChatScreenState extends State<ChatScreen> {
                             children: [
                               Text(
                                 _isMusicPlaying ? AppTranslations.get('atmosphereOn') : AppTranslations.get('changeAtmosphere'),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  fontSize: 11,
+                                  fontSize: isCompact ? 10 : 11,
                                   fontWeight: FontWeight.w600,
                                   color: _isMusicPlaying ? Colors.white : AppTheme.sageGreen,
                                 ),
@@ -551,7 +566,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
                     // Token indicator
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isCompact ? 8 : 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: AppTheme.sageGreen.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(20),
@@ -589,11 +607,13 @@ class _ChatScreenState extends State<ChatScreen> {
                     length: 3,
                     child: Column(
                       children: [
-                        const TabBar(
+                        TabBar(
+                          isScrollable: true,
+                          tabAlignment: TabAlignment.start,
                           labelColor: AppTheme.sageGreen,
                           unselectedLabelColor: AppTheme.mutedSage,
                           indicatorColor: AppTheme.sageGreen,
-                          tabs: [
+                          tabs: const [
                             Tab(text: 'İçini Dök'),
                             Tab(text: 'Anı Yaz'),
                             Tab(text: 'Anılar'),
@@ -808,13 +828,17 @@ class _ChatScreenState extends State<ChatScreen> {
       );
     }
 
-    return GridView.builder(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final crossAxisCount = width <= 360 ? 1 : 2;
+        return GridView.builder(
       padding: const EdgeInsets.all(12),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
-        childAspectRatio: 0.95,
+        childAspectRatio: width <= 390 ? 0.9 : 0.95,
       ),
       itemCount: _compassionMemories.length,
       itemBuilder: (context, index) {
@@ -835,8 +859,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: Center(
                     child: SvgPicture.asset(
                       _moodCatAsset(item.mood),
-                      width: 120,
-                      height: 120,
+                      width: width <= 390 ? 100 : 120,
+                      height: width <= 390 ? 100 : 120,
                       fit: BoxFit.contain,
                     ),
                   ),
@@ -854,6 +878,8 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
         );
+      },
+    );
       },
     );
   }

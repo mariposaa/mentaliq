@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../config/app_theme.dart';
+import '../../config/responsive.dart';
 import '../../models/forum_daily_question.dart';
 import '../../services/admin_role_service.dart';
 import '../../services/forum_service.dart';
@@ -374,6 +375,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isCompact = context.isCompactPhone;
     if (_checkingAccess) {
       return const Scaffold(
         backgroundColor: AppTheme.sandBeige,
@@ -407,7 +409,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 fontWeight: FontWeight.w600, color: AppTheme.forestCharcoal)),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: context.insetsAll(isCompact ? 14 : 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -417,9 +419,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     .titleLarge
                     ?.copyWith(color: AppTheme.forestCharcoal)),
             const SizedBox(height: 16),
-            Row(
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
               children: [
-                Expanded(
+                SizedBox(
+                  width: isCompact ? double.infinity : (MediaQuery.sizeOf(context).width - 64) / 2,
                   child: OutlinedButton.icon(
                     onPressed: () async {
                       final d = await showDatePicker(
@@ -440,8 +445,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         foregroundColor: AppTheme.forestCharcoal),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
+                SizedBox(
+                  width: isCompact ? double.infinity : (MediaQuery.sizeOf(context).width - 64) / 2,
                   child: DropdownButtonFormField<String>(
                     initialValue: _selectedLang,
                     decoration: const InputDecoration(
@@ -471,7 +476,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 if (_editingId != null)
                   TextButton(
@@ -481,7 +488,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     },
                     child: const Text('Yeni soru'),
                   ),
-                const SizedBox(width: 8),
                 FilledButton(
                   onPressed:
                       (_loading || !_canManageDailyQuestions) ? null : _save,
@@ -590,9 +596,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               ),
             ),
             const SizedBox(height: 10),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
-                Expanded(
+                SizedBox(
+                  width: isCompact ? double.infinity : (MediaQuery.sizeOf(context).width - 72) / 3,
                   child: OutlinedButton(
                     onPressed: (_updatingAdmin || !_canManageAdminEmails)
                         ? null
@@ -600,8 +609,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     child: const Text('Ara'),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
+                SizedBox(
+                  width: isCompact ? double.infinity : (MediaQuery.sizeOf(context).width - 72) / 3,
                   child: FilledButton(
                     onPressed: (_updatingAdmin || !_canManageAdminEmails)
                         ? null
@@ -611,8 +620,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     child: const Text('Admin Yap'),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
+                SizedBox(
+                  width: isCompact ? double.infinity : (MediaQuery.sizeOf(context).width - 72) / 3,
                   child: OutlinedButton(
                     onPressed: (_updatingAdmin || !_canManageAdminEmails)
                         ? null
@@ -732,6 +741,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   }
 
   Widget _buildSafetyEventsPanel() {
+    final isCompact = context.isCompactPhone;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -748,17 +758,20 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           style: TextStyle(color: AppTheme.mutedSage),
         ),
         const SizedBox(height: 10),
-        Row(
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
           children: [
-            Expanded(
+            SizedBox(
+              width: isCompact ? double.infinity : (MediaQuery.sizeOf(context).width - 64) / 2,
               child: OutlinedButton.icon(
                 onPressed: _pickSafetyFromDate,
                 icon: const Icon(Icons.date_range, size: 16),
                 label: Text('Baslangic: ${DateFormat('d MMM', 'tr').format(_safetyFrom)}'),
               ),
             ),
-            const SizedBox(width: 8),
-            Expanded(
+            SizedBox(
+              width: isCompact ? double.infinity : (MediaQuery.sizeOf(context).width - 64) / 2,
               child: OutlinedButton.icon(
                 onPressed: _pickSafetyToDate,
                 icon: const Icon(Icons.event, size: 16),
@@ -768,9 +781,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           ],
         ),
         const SizedBox(height: 8),
-        Row(
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
           children: [
-            Expanded(
+            SizedBox(
+              width: isCompact ? double.infinity : 180,
               child: DropdownButtonFormField<String>(
                 initialValue: _safetySeverityFilter,
                 decoration: const InputDecoration(
@@ -790,9 +806,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 },
               ),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              flex: 2,
+            SizedBox(
+              width: isCompact ? double.infinity : MediaQuery.sizeOf(context).width - 232,
               child: TextField(
                 controller: _safetyUidFilterController,
                 onChanged: (_) => setState(() {}),

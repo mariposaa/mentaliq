@@ -17,6 +17,7 @@ import '../../models/daily_guidance_model.dart';
 import '../../services/natal_chart_service.dart';
 import '../../services/astro_guidance_service.dart';
 import '../../l10n/app_translations.dart';
+import '../../config/responsive.dart';
 
 /// Astroloji ve Rüya Room - Kozmik HUD Tasarımı
 class AstrologyDreamRoomScreen extends StatefulWidget {
@@ -645,12 +646,16 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen> {
   }
 
   Widget _buildAstrologyTab() {
+    final isCompact = context.isCompactPhone;
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator(color: Colors.cyanAccent));
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: EdgeInsets.symmetric(
+        horizontal: isCompact ? 14 : 20,
+        vertical: 10,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1831,6 +1836,7 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen> {
   }
 
   Widget _buildPremiumHeader() {
+    final isCompact = context.isCompactPhone;
     return Column(
       children: [
         Stack(
@@ -1870,7 +1876,7 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen> {
           ],
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          padding: EdgeInsets.symmetric(horizontal: isCompact ? 14 : 20, vertical: 8),
           child: Row(
             children: [
               Container(
@@ -1884,21 +1890,25 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen> {
                   child: Text('🌙', style: TextStyle(fontSize: 22)),
                 ),
               ),
-              const SizedBox(width: 14),
+              SizedBox(width: isCompact ? 10 : 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       AppTranslations.get('astrologyAndDreams'),
-                      style: const TextStyle(
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 20,
+                        fontSize: isCompact ? 18 : 20,
                         color: Colors.white,
                       ),
                     ),
                     Text(
                       AppTranslations.get('starAndDreamAnalysis'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.white38,
                         fontSize: 11,

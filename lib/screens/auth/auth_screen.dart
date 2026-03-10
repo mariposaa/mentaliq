@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
+import '../../config/responsive.dart';
 import '../../l10n/app_translations.dart';
 import '../../services/auth_service.dart';
 
@@ -116,6 +117,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isCompact = context.isCompactPhone;
     return Scaffold(
       backgroundColor: AppTheme.sandBeige,
       appBar: AppBar(
@@ -124,12 +126,12 @@ class _AuthScreenState extends State<AuthScreen> {
         title: Text(AppTranslations.get('secureYourAccount')),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: context.insetsAll(isCompact ? 14 : 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(isCompact ? 12 : 16),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(14),
@@ -138,7 +140,11 @@ class _AuthScreenState extends State<AuthScreen> {
                 AuthService.isAnonymous
                     ? AppTranslations.get('guestSessionInfo')
                     : AppTranslations.get('accountLinkedInfo'),
-                style: const TextStyle(color: Colors.black87, height: 1.4),
+                style: TextStyle(
+                  color: Colors.black87,
+                  height: 1.4,
+                  fontSize: isCompact ? 13 : 14,
+                ),
               ),
             ),
             const SizedBox(height: 16),

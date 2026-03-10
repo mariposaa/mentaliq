@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../config/app_theme.dart';
+import '../../config/responsive.dart';
 import '../../l10n/app_translations.dart';
 import '../../models/forum_post.dart';
 import '../../models/forum_daily_question.dart';
 import '../../services/forum_service.dart';
-import '../../services/auth_service.dart';
+import '../../widgets/responsive_card.dart';
 import 'campfire_post_detail_screen.dart';
 
 class CampfireDailyTab extends StatefulWidget {
@@ -61,6 +62,7 @@ class _CampfireDailyTabState extends State<CampfireDailyTab> {
 
   @override
   Widget build(BuildContext context) {
+    final isCompact = context.isCompactPhone;
     if (_question == null) {
       return Center(
         child: Column(
@@ -78,19 +80,27 @@ class _CampfireDailyTabState extends State<CampfireDailyTab> {
     final q = _question!;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isCompact ? 14 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: AppTheme.terracotta.withOpacity(0.12), borderRadius: BorderRadius.circular(16)),
+          ResponsiveCard(
+            padding: 16,
+            color: AppTheme.terracotta.withOpacity(0.12),
+            radius: 16,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(DateFormat('d MMM yyyy', 'tr').format(q.date), style: TextStyle(fontSize: 12, color: AppTheme.mutedSage)),
                 const SizedBox(height: 8),
-                Text(q.text, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: AppTheme.forestCharcoal)),
+                Text(
+                  q.text,
+                  style: TextStyle(
+                    fontSize: isCompact ? 15 : 17,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.forestCharcoal,
+                  ),
+                ),
               ],
             ),
           ),
@@ -150,6 +160,7 @@ class _AnswerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isCompact = context.isCompactPhone;
     return Card(
       margin: const EdgeInsets.only(bottom: 0),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -166,8 +177,19 @@ class _AnswerCard extends StatelessWidget {
                 children: [
                   CircleAvatar(radius: 14, backgroundColor: AppTheme.terracotta.withOpacity(0.2), child: Text(post.displayAuthorName[0].toUpperCase(), style: const TextStyle(fontSize: 12, color: AppTheme.terracotta, fontWeight: FontWeight.w600))),
                   const SizedBox(width: 8),
-                  Text(post.displayAuthorName, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.forestCharcoal)),
-                  const Spacer(),
+                  Expanded(
+                    child: Text(
+                      post.displayAuthorName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: isCompact ? 12 : 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.forestCharcoal,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Text(DateFormat('HH:mm', 'tr').format(post.createdAt), style: TextStyle(fontSize: 11, color: AppTheme.mutedSage)),
                 ],
               ),

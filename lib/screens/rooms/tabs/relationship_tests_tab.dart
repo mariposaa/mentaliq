@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
+import '../../../config/responsive.dart';
 import '../../../l10n/app_translations.dart';
 import '../../../models/partner_model.dart';
 import '../../../services/partner_service.dart';
@@ -184,7 +185,7 @@ class _RelationshipTestsTabState extends State<RelationshipTestsTab>
 
     // Main view with mode selector and partner card
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: context.insetsAll(context.isCompactPhone ? 14 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -204,8 +205,9 @@ class _RelationshipTestsTabState extends State<RelationshipTestsTab>
   }
 
   Widget _buildModeSelector() {
+    final isCompact = context.isCompactPhone;
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isCompact ? 14 : 20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -231,6 +233,8 @@ class _RelationshipTestsTabState extends State<RelationshipTestsTab>
                   children: [
                     Text(
                       AppTranslations.get('myAnswers'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: AppTheme.forestCharcoal,
@@ -238,6 +242,8 @@ class _RelationshipTestsTabState extends State<RelationshipTestsTab>
                     ),
                     Text(
                       AppTranslations.get('answerModeQuestion'),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: AppTheme.mutedSage,
                         fontSize: 13,
@@ -291,13 +297,14 @@ class _RelationshipTestsTabState extends State<RelationshipTestsTab>
     required String subtitle,
     required Color color,
   }) {
+    final isCompact = context.isCompactPhone;
     final isSelected = _selectedMode == mode;
     
     return GestureDetector(
       onTap: () => _saveMode(mode),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(isCompact ? 12 : 16),
         decoration: BoxDecoration(
           color: isSelected ? color.withOpacity(0.1) : AppTheme.sandBeige,
           borderRadius: BorderRadius.circular(14),
@@ -308,14 +315,16 @@ class _RelationshipTestsTabState extends State<RelationshipTestsTab>
         ),
         child: Row(
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 28)),
-            const SizedBox(width: 14),
+            Text(emoji, style: TextStyle(fontSize: isCompact ? 24 : 28)),
+            SizedBox(width: isCompact ? 10 : 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 15,
@@ -324,6 +333,8 @@ class _RelationshipTestsTabState extends State<RelationshipTestsTab>
                   ),
                   Text(
                     subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 12,
                       color: AppTheme.mutedSage,

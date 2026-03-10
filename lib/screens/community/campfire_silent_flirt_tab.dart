@@ -3,10 +3,12 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../config/app_theme.dart';
+import '../../config/responsive.dart';
 import '../../services/auth_service.dart';
 import '../../l10n/app_translations.dart';
 import '../../services/silent_flirt_chat_service.dart';
 import '../../services/silent_flirt_service.dart';
+import '../../widgets/responsive_card.dart';
 import 'silent_flirt_chat_screen.dart';
 
 class CampfireSilentFlirtTab extends StatefulWidget {
@@ -162,16 +164,14 @@ class _CampfireSilentFlirtTabState extends State<CampfireSilentFlirtTab> {
   }
 
   Widget _buildIntro() {
+    final isCompact = context.isCompactPhone;
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(isCompact ? 12 : 16),
       children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppTheme.warmCream,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppTheme.softBorder),
-          ),
+        ResponsiveCard(
+          padding: 16,
+          radius: 16,
+          border: Border.all(color: AppTheme.softBorder),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -239,9 +239,12 @@ class _CampfireSilentFlirtTabState extends State<CampfireSilentFlirtTab> {
           controlAffinity: ListTileControlAffinity.leading,
         ),
         const SizedBox(height: 6),
-        Row(
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
           children: [
-            Expanded(
+            SizedBox(
+              width: isCompact ? double.infinity : (context.screenWidth - 42) / 2,
               child: OutlinedButton(
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -257,8 +260,8 @@ class _CampfireSilentFlirtTabState extends State<CampfireSilentFlirtTab> {
                 child: Text(AppTranslations.get('cancel')),
               ),
             ),
-            const SizedBox(width: 10),
-            Expanded(
+            SizedBox(
+              width: isCompact ? double.infinity : (context.screenWidth - 42) / 2,
               child: FilledButton(
                 onPressed: (_checkedPrivacy && _checkedPolicy)
                     ? _acceptAndContinue
@@ -266,7 +269,11 @@ class _CampfireSilentFlirtTabState extends State<CampfireSilentFlirtTab> {
                 style: FilledButton.styleFrom(
                   backgroundColor: AppTheme.terracotta,
                 ),
-                child: Text(AppTranslations.get('silentFlirtAcceptContinue')),
+                child: Text(
+                  AppTranslations.get('silentFlirtAcceptContinue'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ),
           ],
@@ -276,6 +283,7 @@ class _CampfireSilentFlirtTabState extends State<CampfireSilentFlirtTab> {
   }
 
   Widget _buildTemplateAndProfiles() {
+    final isCompact = context.isCompactPhone;
     return StreamBuilder<SilentFlirtProfile?>(
       stream: SilentFlirtService.watchMyProfile(),
       builder: (context, snap) {
@@ -287,7 +295,7 @@ class _CampfireSilentFlirtTabState extends State<CampfireSilentFlirtTab> {
           _hydratedFromProfile = false;
         }
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(isCompact ? 12 : 16),
           children: [
             _buildTemplateCard(
               title: mine == null
@@ -310,13 +318,10 @@ class _CampfireSilentFlirtTabState extends State<CampfireSilentFlirtTab> {
   }
 
   Widget _buildTemplateCard({required String title}) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.warmCream,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.softBorder),
-      ),
+    return ResponsiveCard(
+      padding: 14,
+      radius: 16,
+      border: Border.all(color: AppTheme.softBorder),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -560,16 +565,22 @@ class _CampfireSilentFlirtTabState extends State<CampfireSilentFlirtTab> {
                 children: [
                   Row(
                     children: [
-                      Text(
-                        '@${p.nick}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.forestCharcoal,
+                      Expanded(
+                        child: Text(
+                          '@${p.nick}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.forestCharcoal,
+                          ),
                         ),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 8),
                       Text(
                         '${AppTranslations.get('silentFlirtScore')}: $score',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           color: AppTheme.terracotta,
@@ -747,10 +758,10 @@ class _CampfireSilentFlirtTabState extends State<CampfireSilentFlirtTab> {
       builder: (context, snap) {
         final chats = snap.data ?? [];
         return Container(
-          padding: const EdgeInsets.all(12),
+          padding: context.insetsAll(12),
           decoration: BoxDecoration(
             color: AppTheme.warmCream,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(context.radius(14)),
             border: Border.all(color: AppTheme.softBorder),
           ),
           child: Column(

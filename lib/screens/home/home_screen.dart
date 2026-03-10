@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/app_theme.dart';
+import '../../config/responsive.dart';
 import '../../config/app_constants.dart';
 import '../../l10n/app_translations.dart';
 import '../../providers/language_provider.dart';
@@ -22,6 +23,7 @@ import '../community/campfire_forum_screen.dart';
 import '../notifications/notifications_screen.dart';
 import '../admin/admin_panel_screen.dart';
 import '../auth/auth_screen.dart';
+import '../settings/settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -196,6 +198,10 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  double get _screenWidth => MediaQuery.sizeOf(context).width;
+  bool get _isCompact => _screenWidth <= ResponsiveBreakpoints.compactPhone;
+  bool get _isVeryCompact => _screenWidth <= ResponsiveBreakpoints.tinyPhone;
+
   @override
   Widget build(BuildContext context) {
     // Refresh tokens whenever build is called if they are still 100 (initial)
@@ -216,6 +222,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildBottomNav() {
+    final horizontalPadding = _isVeryCompact ? 10.0 : 20.0;
+    final verticalPadding = _isVeryCompact ? 6.0 : 8.0;
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.warmCream,
@@ -229,7 +237,10 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          padding: EdgeInsets.symmetric(
+            horizontal: horizontalPadding,
+            vertical: verticalPadding,
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -247,11 +258,15 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildNavItem(int index, IconData icon, String label) {
     final isSelected = _selectedNavIndex == index;
     final isCampfire = index == 1;
+    final compact = _isVeryCompact;
     return GestureDetector(
       onTap: () => setState(() => _selectedNavIndex = index),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 10 : 16,
+          vertical: compact ? 8 : 10,
+        ),
         decoration: BoxDecoration(
           color: isSelected
               ? (isCampfire
@@ -261,23 +276,28 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
               color: isSelected
                   ? (isCampfire ? AppTheme.terracotta : AppTheme.sageGreen)
                   : AppTheme.mutedSage,
-              size: 24,
+              size: compact ? 20 : 24,
             ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected
-                    ? (isCampfire ? AppTheme.terracotta : AppTheme.sageGreen)
-                    : AppTheme.mutedSage,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                fontSize: 14,
+            SizedBox(width: compact ? 4 : 8),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: isSelected
+                      ? (isCampfire ? AppTheme.terracotta : AppTheme.sageGreen)
+                      : AppTheme.mutedSage,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  fontSize: compact ? 12 : 14,
+                ),
               ),
             ),
           ],
@@ -287,13 +307,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHomeContent() {
+    final horizontalPadding = _isVeryCompact ? 14.0 : 20.0;
     return SafeArea(
       child: Column(
         children: [
           _buildHeader(),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              padding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding,
+                vertical: 10,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -326,10 +350,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHeader() {
+    final isCompact = _isCompact;
+    final actionIconMinSize = _isVeryCompact ? 36.0 : 40.0;
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-      child: Row(
+      padding: EdgeInsets.fromLTRB(isCompact ? 14 : 20, 20, isCompact ? 14 : 20, 16),
+      child: Column(
         children: [
+          Row(
+            children: [
           // User Avatar & Name
           Expanded(
             child: Row(
@@ -337,8 +365,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 GestureDetector(
                   onTap: _onAdminTap,
                   child: Container(
-                    width: 48,
-                    height: 48,
+                    width: isCompact ? 42 : 48,
+                    height: isCompact ? 42 : 48,
                     decoration: BoxDecoration(
                       color: AppTheme.sageGreen.withOpacity(0.15),
                       shape: BoxShape.circle,
@@ -349,7 +377,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ? _userName[0].toUpperCase()
                             : AppTranslations.get('guest')[0].toUpperCase(),
                         style: const TextStyle(
-                          fontSize: 20,
+                          fontSize: 18,
                           fontWeight: FontWeight.w600,
                           color: AppTheme.sageGreen,
                         ),
@@ -357,7 +385,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: isCompact ? 10 : 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -451,6 +479,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                     _userName.isNotEmpty
                                         ? _userName
                                         : AppTranslations.get('guest'),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: Theme.of(context)
                                         .textTheme
                                         .titleMedium
@@ -480,8 +510,8 @@ class _HomeScreenState extends State<HomeScreen> {
               GestureDetector(
                 onTap: () => LanguagePicker.show(context),
                 child: Container(
-                  width: 36,
-                  height: 36,
+                  width: actionIconMinSize,
+                  height: actionIconMinSize,
                   decoration: BoxDecoration(
                     color: AppTheme.sageGreen.withOpacity(0.1),
                     shape: BoxShape.circle,
@@ -525,7 +555,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     ? AppTranslations.get('linkAccount')
                     : AppTranslations.get('accountManagement'),
                 padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                constraints: BoxConstraints(
+                  minWidth: actionIconMinSize,
+                  minHeight: actionIconMinSize,
+                ),
               ),
               IconButton(
                 onPressed: () => Navigator.of(context).push(MaterialPageRoute(
@@ -533,47 +566,71 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: Icon(Icons.notifications_outlined,
                     color: AppTheme.forestCharcoal),
                 padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                constraints: BoxConstraints(
+                  minWidth: actionIconMinSize,
+                  minHeight: actionIconMinSize,
+                ),
               ),
-              const SizedBox(width: 4),
-              GestureDetector(
-                onTap: _onTokenChipTap,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: AppTheme.warmCream,
-                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                    border: Border.all(color: AppTheme.softBorder),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 24,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: AppTheme.terracotta.withOpacity(0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Center(
-                          child: Text('✨', style: TextStyle(fontSize: 12)),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '$_tokenBalance',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                          color: AppTheme.forestCharcoal,
-                        ),
-                      ),
-                    ],
-                  ),
+              IconButton(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const SettingsScreen())),
+                icon: Icon(Icons.settings_outlined,
+                    color: AppTheme.forestCharcoal),
+                padding: EdgeInsets.zero,
+                constraints: BoxConstraints(
+                  minWidth: actionIconMinSize,
+                  minHeight: actionIconMinSize,
                 ),
               ),
             ],
+          ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerRight,
+            child: GestureDetector(
+              onTap: _onTokenChipTap,
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isCompact ? 10 : 14,
+                  vertical: isCompact ? 8 : 10,
+                ),
+                decoration: BoxDecoration(
+                  color: AppTheme.warmCream,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                  border: Border.all(color: AppTheme.softBorder),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: isCompact ? 20 : 24,
+                      height: isCompact ? 20 : 24,
+                      decoration: BoxDecoration(
+                        color: AppTheme.terracotta.withOpacity(0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          '✨',
+                          style: TextStyle(fontSize: isCompact ? 10 : 12),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: isCompact ? 6 : 8),
+                    Text(
+                      '$_tokenBalance',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: isCompact ? 14 : 16,
+                        color: AppTheme.forestCharcoal,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -759,6 +816,16 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Build a row of 2 cards
   Widget _buildCardRow(int index1, int index2) {
     final categories = AppConstants.aiCategories;
+    final useSingleColumn = _isCompact;
+    if (useSingleColumn) {
+      return Column(
+        children: [
+          if (index1 < categories.length) _buildModuleCard(categories[index1]),
+          if (index2 < categories.length) const SizedBox(height: 12),
+          if (index2 < categories.length) _buildModuleCard(categories[index2]),
+        ],
+      );
+    }
     return Row(
       children: [
         if (index1 < categories.length)
@@ -1322,8 +1389,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildDailyInsight() {
+    final isCompact = _isCompact;
     return Container(
-      constraints: const BoxConstraints(minHeight: 220, maxHeight: 250),
+      constraints: BoxConstraints(
+        minHeight: isCompact ? 210 : 220,
+        maxHeight: isCompact ? 235 : 250,
+      ),
       child: PageView.builder(
         controller: _pageController,
         onPageChanged: (index) {
@@ -1341,10 +1412,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildAnnouncementCard(Map<String, dynamic> data) {
+    final isCompact = _isCompact;
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: 2),
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isCompact ? 18 : 24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -1376,17 +1448,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
-                      fontSize: 14,
+                      fontSize: isCompact ? 13 : 14,
                     ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: isCompact ? 14 : 20),
           Text(
             AppTranslations.get(data['titleKey']),
-            style: const TextStyle(
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
               color: Colors.white,
-              fontSize: 18,
+              fontSize: isCompact ? 16 : 18,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -1396,10 +1470,11 @@ class _HomeScreenState extends State<HomeScreen> {
               AppTranslations.get(data['subtitleKey']),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Colors.white.withOpacity(0.9),
-                    fontSize: 13,
+                    fontSize: isCompact ? 12 : 13,
                     height: 1.3,
                   ),
-              overflow: TextOverflow.visible,
+              maxLines: isCompact ? 5 : 6,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

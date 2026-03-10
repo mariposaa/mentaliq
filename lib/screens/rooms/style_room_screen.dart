@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
+import '../../config/responsive.dart';
 import '../../l10n/app_translations.dart';
 import 'tabs/style_closet_tab.dart';
 import 'tabs/style_analysis_tab.dart';
@@ -35,13 +36,14 @@ class _StyleRoomScreenState extends State<StyleRoomScreen> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
+    final isCompact = context.isCompactPhone;
     return Scaffold(
       backgroundColor: AppTheme.sandBeige,
       body: SafeArea(
         child: Column(
           children: [
             _buildHeader(),
-            _buildTabBar(),
+            _buildTabBar(isCompact),
             Expanded(
               child: TabBarView(
                 controller: _tabController,
@@ -59,6 +61,7 @@ class _StyleRoomScreenState extends State<StyleRoomScreen> with SingleTickerProv
   }
 
   Widget _buildHeader() {
+    final isCompact = context.isCompactPhone;
     return Column(
       children: [
         Stack(
@@ -97,7 +100,7 @@ class _StyleRoomScreenState extends State<StyleRoomScreen> with SingleTickerProv
           ],
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          padding: EdgeInsets.symmetric(horizontal: isCompact ? 14 : 20, vertical: 8),
           child: Row(
             children: [
               Container(
@@ -111,20 +114,25 @@ class _StyleRoomScreenState extends State<StyleRoomScreen> with SingleTickerProv
                   child: Text('👗', style: TextStyle(fontSize: 22)),
                 ),
               ),
-              const SizedBox(width: 14),
+              SizedBox(width: isCompact ? 10 : 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       AppTranslations.get('styleConsulting'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: AppTheme.forestCharcoal,
+                            fontSize: isCompact ? 22 : null,
                           ),
                     ),
                     Text(
                       AppTranslations.get('digitalArchiveAssistant'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppTheme.mutedSage,
                             letterSpacing: 0.5,
@@ -140,9 +148,9 @@ class _StyleRoomScreenState extends State<StyleRoomScreen> with SingleTickerProv
     );
   }
 
-  Widget _buildTabBar() {
+  Widget _buildTabBar(bool isCompact) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: EdgeInsets.symmetric(horizontal: isCompact ? 12 : 16, vertical: 8),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: AppTheme.warmCream,
@@ -152,6 +160,8 @@ class _StyleRoomScreenState extends State<StyleRoomScreen> with SingleTickerProv
       ),
       child: TabBar(
         controller: _tabController,
+        isScrollable: true,
+        tabAlignment: TabAlignment.start,
         indicator: BoxDecoration(
           color: AppTheme.terracotta,
           borderRadius: BorderRadius.circular(10),
@@ -161,13 +171,13 @@ class _StyleRoomScreenState extends State<StyleRoomScreen> with SingleTickerProv
         indicatorSize: TabBarIndicatorSize.tab,
         dividerColor: Colors.transparent,
         tabs: _tabs.map((tab) => Tab(
-          height: 40,
+          height: isCompact ? 36 : 40,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(tab.icon, size: 16),
-              const SizedBox(width: 6),
-              Text(tab.label, style: const TextStyle(fontSize: 12)),
+              Icon(tab.icon, size: isCompact ? 14 : 16),
+              SizedBox(width: isCompact ? 4 : 6),
+              Text(tab.label, style: TextStyle(fontSize: isCompact ? 11 : 12)),
             ],
           ),
         )).toList(),

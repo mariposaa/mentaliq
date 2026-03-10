@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
+import '../../config/responsive.dart';
 import '../../l10n/app_translations.dart';
 import 'tabs/motivation_chat_tab.dart';
 import 'tabs/motivation_goals_tab.dart';
@@ -71,8 +72,12 @@ class _MotivationRoomScreenState extends State<MotivationRoomScreen>
   }
 
   Widget _buildHeader() {
+    final isCompact = context.isCompactPhone;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+      padding: EdgeInsets.symmetric(
+        horizontal: isCompact ? 6 : 8,
+        vertical: 12,
+      ),
       child: Row(
         children: [
           IconButton(
@@ -98,12 +103,17 @@ class _MotivationRoomScreenState extends State<MotivationRoomScreen>
               children: [
                 Text(
                   AppTranslations.get('motivationPersonalDev'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
+                        fontSize: isCompact ? 15 : null,
                       ),
                 ),
                 Text(
                   AppTranslations.get('goalsHabitsGrowth'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppTheme.mutedSage,
                       ),
@@ -117,8 +127,9 @@ class _MotivationRoomScreenState extends State<MotivationRoomScreen>
   }
 
   Widget _buildTabBar() {
+    final isCompact = context.isCompactPhone;
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: EdgeInsets.symmetric(horizontal: isCompact ? 12 : 16, vertical: 8),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: AppTheme.warmCream,
@@ -128,6 +139,8 @@ class _MotivationRoomScreenState extends State<MotivationRoomScreen>
       ),
       child: TabBar(
         controller: _tabController,
+        isScrollable: true,
+        tabAlignment: TabAlignment.start,
         indicator: BoxDecoration(
           color: const Color(0xFF9C27B0), // Purple theme
           borderRadius: BorderRadius.circular(10),
@@ -153,13 +166,13 @@ class _MotivationRoomScreenState extends State<MotivationRoomScreen>
         indicatorSize: TabBarIndicatorSize.tab,
         splashBorderRadius: BorderRadius.circular(10),
         tabs: _tabs.map((tab) => Tab(
-          height: 40,
+          height: isCompact ? 36 : 40,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(tab.icon, size: 14),
-              const SizedBox(width: 4),
+              Icon(tab.icon, size: isCompact ? 13 : 14),
+              SizedBox(width: isCompact ? 3 : 4),
               Flexible(
                 child: Text(
                   tab.label,

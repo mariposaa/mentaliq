@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../config/app_theme.dart';
+import '../../config/responsive.dart';
 import '../../l10n/app_translations.dart';
 import '../../services/addiction_service.dart';
 import '../../services/auth_service.dart';
@@ -12,6 +13,7 @@ class NotificationsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isCompact = context.isCompactPhone;
     final uid = AuthService.userId;
     if (uid == null) {
       return Scaffold(
@@ -54,7 +56,7 @@ class NotificationsScreen extends StatelessWidget {
             );
           }
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: context.insetsAll(isCompact ? 12 : 16),
             itemCount: docs.length,
             itemBuilder: (_, i) {
               final d = docs[i].data() as Map<String, dynamic>? ?? {};
@@ -78,7 +80,15 @@ class NotificationsScreen extends StatelessWidget {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 child: ListTile(
                   leading: CircleAvatar(backgroundColor: AppTheme.terracotta.withValues(alpha: 0.2), child: const Icon(Icons.chat_bubble_outline_rounded, color: AppTheme.terracotta)),
-                  title: Text(title, style: TextStyle(fontWeight: read ? FontWeight.normal : FontWeight.w600, fontSize: 14)),
+                  title: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontWeight: read ? FontWeight.normal : FontWeight.w600,
+                      fontSize: isCompact ? 13 : 14,
+                    ),
+                  ),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
@@ -86,7 +96,15 @@ class NotificationsScreen extends StatelessWidget {
                       if (rawMessage != null && rawMessage.trim().isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 4),
-                          child: Text(rawMessage, style: const TextStyle(fontSize: 12, color: AppTheme.mutedSage)),
+                          child: Text(
+                            rawMessage,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: isCompact ? 11 : 12,
+                              color: AppTheme.mutedSage,
+                            ),
+                          ),
                         ),
                       if (createdAt != null)
                         Text(_formatDate(createdAt), style: const TextStyle(fontSize: 12, color: AppTheme.mutedSage)),
