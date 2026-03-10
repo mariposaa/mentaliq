@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
+import '../../../l10n/app_translations.dart';
 import '../../../models/relationship_analysis_model.dart';
 import '../../../services/relationship_analysis_service.dart';
 import '../../../services/partner_service.dart';
@@ -23,6 +24,9 @@ class _RelationshipTipsTabState extends State<RelationshipTipsTab>
   List<RelationshipAnalysisModel> _analyses = [];
   bool _isLoading = false;
   bool _isAnalyzing = false;
+  bool _readinessLoading = false;
+  bool _readyToastShown = false;
+  RelationshipAnalysisReadiness? _readiness;
 
   @override
   bool get wantKeepAlive => true;
@@ -30,7 +34,12 @@ class _RelationshipTipsTabState extends State<RelationshipTipsTab>
   @override
   void initState() {
     super.initState();
-    _loadAnalyses();
+    _initializeTab();
+  }
+
+  Future<void> _initializeTab() async {
+    await _loadAnalyses();
+    await _loadReadiness(showToastIfReady: true);
   }
 
   Future<void> _loadAnalyses() async {
@@ -46,37 +55,68 @@ class _RelationshipTipsTabState extends State<RelationshipTipsTab>
     }
   }
 
+  Future<void> _loadReadiness({bool showToastIfReady = false}) async {
+    setState(() => _readinessLoading = true);
+    final readiness = await RelationshipAnalysisService.getReadinessStatus();
+
+    if (!mounted) return;
+    setState(() {
+      _readiness = readiness;
+      _readinessLoading = false;
+    });
+
+    if (showToastIfReady && readiness.isReady && !_readyToastShown) {
+      _readyToastShown = true;
+      _showSnackbar(
+        'Yeterli veri birikti. Derin ilişki analizini şimdi başlatabilirsin.',
+      );
+    }
+  }
+
   Future<void> _performAnalysis() async {
-    // Check if partner exists
-    final partner = await PartnerService.getPrimaryPartner();
-    if (partner == null) {
-      _showSnackbar('Önce partner bilgilerini girmelisin!', isError: true);
+    final readiness = _readiness ?? await RelationshipAnalysisService.getReadinessStatus();
+    if (!readiness.isReady) {
+      _showSnackbar(
+        readiness.missingReasons.isNotEmpty
+            ? readiness.missingReasons.first
+            : 'Analiz için henüz yeterli veri yok.',
+        isError: true,
+      );
       return;
     }
 
-    // Check tokens (15 token for analysis)
-    final hasTokens = await TokenService.hasEnoughTokensForAnalysis();
+    // Check if partner exists
+    final partner = await PartnerService.getPrimaryPartner();
+    if (partner == null) {
+      _showSnackbar(AppTranslations.get('errorPartnerRequired'), isError: true);
+      return;
+    }
+
+    // Check tokens (30 token for deep analysis)
+    final hasTokens = await TokenService.hasEnoughTokensForRelationshipAnalysis();
     if (!hasTokens) {
+      _showSnackbar('Elmas yetersiz. Reklam izleyerek +30 elmas kazanabilirsin.');
+
       // Show token dialog with ad option
       if (!mounted) return;
       final gotTokens = await TokenDialog.show(context);
       if (!gotTokens) return;
       
       // Re-check after watching ad
-      final hasTokensNow = await TokenService.hasEnoughTokensForAnalysis();
+      final hasTokensNow = await TokenService.hasEnoughTokensForRelationshipAnalysis();
       if (!hasTokensNow) {
-        _showSnackbar('Analiz için 15 token gerekli!', isError: true);
+        _showSnackbar('Derin analiz için 30 token gerekli!', isError: true);
         return;
       }
     }
 
     setState(() => _isAnalyzing = true);
 
-    // Use tokens for analysis (15 tokens)
-    final used = await TokenService.useTokensForAnalysis();
+    // Use tokens for relationship deep analysis (30 tokens)
+    final used = await TokenService.useTokensForRelationshipAnalysis();
     if (!used) {
       setState(() => _isAnalyzing = false);
-      _showSnackbar('Token kullanılamadı!', isError: true);
+      _showSnackbar(AppTranslations.get('errorTokenUsage'), isError: true);
       return;
     }
 
@@ -90,9 +130,10 @@ class _RelationshipTipsTabState extends State<RelationshipTipsTab>
         setState(() {
           _analyses.insert(0, analysis);
         });
+        await _loadReadiness(showToastIfReady: false);
         _showAnalysisDetail(analysis);
       } else {
-        _showSnackbar('Analiz yapılamadı. Tekrar dene.', isError: true);
+        _showSnackbar(AppTranslations.get('errorAnalysis'), isError: true);
       }
     }
   }
@@ -137,20 +178,23 @@ class _RelationshipTipsTabState extends State<RelationshipTipsTab>
   }
 
   Widget _buildAnalysisButton() {
+    final ready = _readiness?.isReady ?? false;
+    final canAnalyze = !_isAnalyzing && ready && !_readinessLoading;
+
     return Container(
       margin: const EdgeInsets.all(16),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: _isAnalyzing ? null : _performAnalysis,
+          onTap: canAnalyze ? _performAnalysis : null,
           borderRadius: BorderRadius.circular(16),
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: _isAnalyzing
-                    ? [Colors.grey.shade400, Colors.grey.shade500]
-                    : [const Color(0xFF667eea), const Color(0xFF764ba2)],
+                colors: canAnalyze
+                    ? [const Color(0xFF667eea), const Color(0xFF764ba2)]
+                    : [Colors.grey.shade400, Colors.grey.shade500],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -163,64 +207,102 @@ class _RelationshipTipsTabState extends State<RelationshipTipsTab>
                 ),
               ],
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            child: Column(
               children: [
-                if (_isAnalyzing) ...[
-                  const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      valueColor: AlwaysStoppedAnimation(Colors.white),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Analiz Ediliyor...',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ] else ...[
-                  const Icon(Icons.psychology_rounded, color: Colors.white, size: 28),
-                  const SizedBox(width: 12),
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (_isAnalyzing) ...[
+                      const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
                       Text(
-                        'İlişkini Analiz Et',
-                        style: TextStyle(
+                        AppTranslations.get('analyzing'),
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      Text(
-                        'Müfettiş raporunu al',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
+                    ] else ...[
+                      const Icon(Icons.psychology_rounded, color: Colors.white, size: 28),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            AppTranslations.get('analyzeRelationship'),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            'Derin rapor • 30 token',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
                         ),
+                        child: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
                       ),
                     ],
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
-                  ),
-                ],
+                  ],
+                ),
+                const SizedBox(height: 10),
+                _buildReadinessHint(),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildReadinessHint() {
+    if (_readinessLoading || _readiness == null) {
+      return const Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          'Veri yeterliliği kontrol ediliyor...',
+          style: TextStyle(color: Colors.white70, fontSize: 12),
+        ),
+      );
+    }
+
+    final r = _readiness!;
+    if (r.isReady) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          'Hazır: ${r.userMessageCount} konuşma verisi bulundu. Analizi başlatabilirsin.',
+          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+        ),
+      );
+    }
+
+    final reason = r.missingReasons.isNotEmpty ? r.missingReasons.first : 'Yeterli veri yok';
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        'Henüz hazır değil: $reason',
+        style: const TextStyle(color: Colors.white70, fontSize: 12),
       ),
     );
   }
@@ -245,7 +327,7 @@ class _RelationshipTipsTabState extends State<RelationshipTipsTab>
             ),
             const SizedBox(height: 24),
             Text(
-              'Henüz Analiz Yok',
+              AppTranslations.get('noAnalysis'),
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: AppTheme.forestCharcoal,
@@ -253,7 +335,7 @@ class _RelationshipTipsTabState extends State<RelationshipTipsTab>
             ),
             const SizedBox(height: 12),
             Text(
-              'Yukarıdaki butona basarak ilişkinin durumunu analiz et ve kişisel tavsiyeler al.',
+              AppTranslations.get('noAnalysisMsg'),
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: AppTheme.mutedSage,
@@ -408,7 +490,7 @@ class _AnalysisDetailScreenState extends State<_AnalysisDetailScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Müfettiş Raporu',
+          AppTranslations.get('inspectorReportTitle'),
           style: TextStyle(color: AppTheme.forestCharcoal, fontWeight: FontWeight.w600),
         ),
         centerTitle: true,
@@ -482,7 +564,7 @@ class _AnalysisDetailScreenState extends State<_AnalysisDetailScreen> {
                     ),
                   ),
                   Text(
-                    'puan',
+                    AppTranslations.get('points'),
                     style: TextStyle(
                       fontSize: 12,
                       color: AppTheme.mutedSage,
@@ -555,7 +637,7 @@ class _AnalysisDetailScreenState extends State<_AnalysisDetailScreen> {
               Icon(Icons.note_alt_outlined, color: AppTheme.sageGreen, size: 20),
               const SizedBox(width: 8),
               Text(
-                'Müfettiş Notu',
+                AppTranslations.get('inspectorNote'),
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   color: AppTheme.sageGreen,
@@ -595,7 +677,7 @@ class _AnalysisDetailScreenState extends State<_AnalysisDetailScreen> {
               const Text('⚔️', style: TextStyle(fontSize: 20)),
               const SizedBox(width: 8),
               Text(
-                'Karakter Çatışması',
+                AppTranslations.get('characterClash'),
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   color: AppTheme.terracotta,
@@ -640,7 +722,7 @@ class _AnalysisDetailScreenState extends State<_AnalysisDetailScreen> {
             const Text('💊', style: TextStyle(fontSize: 22)),
             const SizedBox(width: 8),
             Text(
-              'Reçeten',
+              AppTranslations.get('prescription'),
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: AppTheme.forestCharcoal,
@@ -725,14 +807,14 @@ class _AnalysisDetailScreenState extends State<_AnalysisDetailScreen> {
                                 color: Colors.red.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(6),
                               ),
-                              child: const Row(
+                              child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text('⚠️', style: TextStyle(fontSize: 10)),
-                                  SizedBox(width: 2),
+                                  const Text('⚠️', style: TextStyle(fontSize: 10)),
+                                  const SizedBox(width: 2),
                                   Text(
-                                    'Acı Reçete',
-                                    style: TextStyle(
+                                    AppTranslations.get('bitterPrescription'),
+                                    style: const TextStyle(
                                       color: Colors.red,
                                       fontSize: 10,
                                       fontWeight: FontWeight.w600,

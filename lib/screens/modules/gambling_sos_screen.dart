@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
 import '../../services/addiction_service.dart';
+import '../../l10n/app_translations.dart';
 
 class GamblingSOSScreen extends StatefulWidget {
   const GamblingSOSScreen({super.key});
@@ -47,9 +48,9 @@ class _GamblingSOSScreenState extends State<GamblingSOSScreen> {
     if (mounted) {
       setState(() {
         _realityChecks = checks ?? [
-          'Kumar sistem değil, matematiktir. Kasa her zaman kazanır.',
-          'Şu anki paranı kaybettiğinde yarın kimden borç isteyeceksin?',
-          'Bu parayı çöpe atsan en azından zamanın sana kalırdı.'
+          AppTranslations.get('realityCheck1'),
+          AppTranslations.get('realityCheck2'),
+          AppTranslations.get('realityCheck3'),
         ];
         _isLoading = false;
       });
@@ -172,17 +173,17 @@ class _GamblingSOSScreenState extends State<GamblingSOSScreen> {
                     children: [
                       _buildActionButton(
                         icon: Icons.call,
-                        label: 'Ara',
+                        label: AppTranslations.get('call'),
                         onTap: () {
                           // Implement call functionality
                         },
                       ),
                        _buildActionButton(
                         icon: Icons.chat_bubble_outline,
-                        label: 'Gemini Konuş',
+                        label: AppTranslations.get('talkToGemini'),
                         onTap: () {
                            ScaffoldMessenger.of(context).showSnackBar(
-                             const SnackBar(content: Text('Acil Durum Sohbeti Başlatılıyor...'))
+                             SnackBar(content: Text(AppTranslations.get('emergencyChatStarting')))
                            );
                            // In a real app, this would open a full chat mode
                            // For now, we simulate a new strong message arriving
@@ -192,7 +193,7 @@ class _GamblingSOSScreenState extends State<GamblingSOSScreen> {
                            Future.delayed(const Duration(seconds: 2), () {
                              if (mounted) {
                                setState(() {
-                                 _realityChecks.add("Yavaşla. Şimdi bana etrafındaki 3 nesneyi söyle.");
+                                 _realityChecks.add(AppTranslations.get('slowDownObjects'));
                                  _isLoading = false;
                                });
                              }
@@ -201,11 +202,11 @@ class _GamblingSOSScreenState extends State<GamblingSOSScreen> {
                       ),
                       _buildActionButton(
                         icon: Icons.exit_to_app,
-                        label: 'Kriz Geçti',
+                        label: AppTranslations.get('crisisPassed'),
                         onTap: () {
                            Navigator.of(context).pop();
                            ScaffoldMessenger.of(context).showSnackBar(
-                             const SnackBar(content: Text('Büyük bir savaşı kazandın. Tebrikler.'))
+                             SnackBar(content: Text(AppTranslations.get('wonBattle')))
                            );
                         },
                         isPrimary: true,

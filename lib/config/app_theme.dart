@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_translations.dart';
 
 /// Mentaliq Theme - Calming Wellness Design
 /// 
 /// Inspired by Headspace/Calm but with an analytical edge.
 /// "Seni yargılamıyoruz, seni anlıyoruz ve iyileştiriyoruz."
 class AppTheme {
+  static String _tr(String key) => AppTranslations.get(key);
+
   // ═══════════════════════════════════════════════════════════════════
   // COLOR PALETTE - Healing & Balance
   // ═══════════════════════════════════════════════════════════════════
@@ -92,13 +95,12 @@ class AppTheme {
     }
   }
   
-  /// Paylaşım türü için etiket metni
   static String postTypeLabel(String postType) {
     switch (postType) {
-      case 'confession': return 'İtiraf';
-      case 'photo_story': return 'Foto';
-      case 'idea_question': return 'Fikir';
-      case 'daily_answer': return 'Günün';
+      case 'confession': return _tr('postConfession');
+      case 'photo_story': return _tr('postPhoto');
+      case 'idea_question': return _tr('postIdea');
+      case 'daily_answer': return _tr('postDaily');
       default: return '';
     }
   }

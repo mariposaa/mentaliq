@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
+import '../l10n/app_translations.dart';
 import '../services/ad_service.dart';
 import '../services/token_service.dart';
 
@@ -40,8 +41,7 @@ class _TokenDialogContentState extends State<_TokenDialogContent> {
     final success = await AdService.showRewardedAd();
     
     if (success) {
-      // Give 30 tokens
-      await TokenService.addTokens(30);
+      await TokenService.addTokens(TokenService.adRewardTokens);
       
       if (mounted) {
         Navigator.of(context).pop(true);
@@ -49,10 +49,10 @@ class _TokenDialogContentState extends State<_TokenDialogContent> {
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(
+            content:               Row(
               children: [
                 const Text('🎉 '),
-                const Text('30 token kazandın!'),
+                Text(AppTranslations.get('tokensEarned')),
               ],
             ),
             backgroundColor: AppTheme.sageGreen,
@@ -65,8 +65,8 @@ class _TokenDialogContentState extends State<_TokenDialogContent> {
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Reklam yüklenemedi, biraz sonra tekrar dene'),
+          SnackBar(
+            content: Text(AppTranslations.get('adLoadFailed')),
             backgroundColor: Colors.red,
           ),
         );
@@ -100,7 +100,7 @@ class _TokenDialogContentState extends State<_TokenDialogContent> {
           
           // Title
           Text(
-            'Tokenin Bitti',
+            AppTranslations.get('tokensRunOut'),
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: AppTheme.forestCharcoal,
@@ -111,7 +111,7 @@ class _TokenDialogContentState extends State<_TokenDialogContent> {
           
           // Friendly message
           Text(
-            'Sohbetimiz çok güzeldi ama tokenin tükendi. Kısa bir reklam izleyerek 30 token kazanabilirsin!',
+            AppTranslations.get('tokensRunOutMsg'),
             textAlign: TextAlign.center,
             style: TextStyle(
               color: AppTheme.forestCharcoal.withOpacity(0.8),
@@ -130,7 +130,7 @@ class _TokenDialogContentState extends State<_TokenDialogContent> {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              'Mevcut: ${widget.currentBalance} token',
+              AppTranslations.format('currentTokens', ['${widget.currentBalance}']),
               style: TextStyle(
                 color: AppTheme.mutedSage,
                 fontSize: 13,
@@ -163,12 +163,12 @@ class _TokenDialogContentState extends State<_TokenDialogContent> {
                         color: Colors.white,
                       ),
                     )
-                  : const Row(
+                  : Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.play_circle_outline_rounded, size: 20),
-                        SizedBox(width: 8),
-                        Text('Reklam İzle (+30 Token)', style: TextStyle(fontWeight: FontWeight.w600)),
+                        const Icon(Icons.play_circle_outline_rounded, size: 20),
+                        const SizedBox(width: 8),
+                        Text(AppTranslations.get('watchAd'), style: const TextStyle(fontWeight: FontWeight.w600)),
                       ],
                     ),
             ),
@@ -180,7 +180,7 @@ class _TokenDialogContentState extends State<_TokenDialogContent> {
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: Text(
-              'Şimdilik değil',
+              AppTranslations.get('notNow'),
               style: TextStyle(color: AppTheme.mutedSage),
             ),
           ),

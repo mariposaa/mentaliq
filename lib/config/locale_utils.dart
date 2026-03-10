@@ -2,7 +2,7 @@
 import 'dart:ui' as ui;
 
 abstract class LocaleUtils {
-  static const String defaultLanguage = 'tr';
+  static const String defaultLanguage = 'en';
   static const List<String> supportedLanguages = ['tr', 'en', 'de', 'es', 'ar'];
 
   /// Telefon dilinden desteklenen kodu döndürür. Eşleşmezse default (tr).

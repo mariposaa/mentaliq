@@ -85,7 +85,8 @@ class AuthService {
   }) async {
     try {
       final anonymousUser = auth.currentUser;
-      final credential = EmailAuthProvider.credential(email: email, password: password);
+      final credential =
+          EmailAuthProvider.credential(email: email, password: password);
 
       UserCredential result;
       if (anonymousUser != null && anonymousUser.isAnonymous) {
@@ -161,7 +162,8 @@ class AuthService {
         try {
           result = await activeUser.linkWithCredential(oauthCredential);
         } on FirebaseAuthException catch (e) {
-          if (e.code == 'credential-already-in-use' || e.code == 'email-already-in-use') {
+          if (e.code == 'credential-already-in-use' ||
+              e.code == 'email-already-in-use') {
             result = await auth.signInWithCredential(oauthCredential);
           } else {
             rethrow;
@@ -198,20 +200,20 @@ class AuthService {
       // First get existing profile
       final doc = await firestore.collection('users').doc(uid).get();
       Map<String, dynamic> existingProfile = {};
-      
+
       if (doc.exists && doc.data()?['profile'] != null) {
         existingProfile = Map<String, dynamic>.from(doc.data()!['profile']);
       }
-      
+
       // Merge with new data
       existingProfile.addAll(profileData);
-      
+
       // Save merged profile
       await firestore.collection('users').doc(uid).set({
         'profile': existingProfile,
         'lastSeenAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-      
+
       debugPrint('Profile updated: $existingProfile');
     } catch (e) {
       debugPrint('Error updating profile: $e');
@@ -245,7 +247,8 @@ class AuthService {
     }
   }
 
-  static Future<void> _ensureUserDocument(User? user, {String? displayName}) async {
+  static Future<void> _ensureUserDocument(User? user,
+      {String? displayName}) async {
     if (user == null) return;
     final docRef = firestore.collection('users').doc(user.uid);
     final existingDoc = await docRef.get();
@@ -265,7 +268,7 @@ class AuthService {
       return;
     }
 
-    final data = {
+    final data = <String, dynamic>{
       'lastSeenAt': FieldValue.serverTimestamp(),
       'profile': {
         'email': user.email,

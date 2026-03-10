@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import '../../../config/app_theme.dart';
+import '../../../models/style_item.dart';
+import '../../../models/style_outfit_record.dart';
 import '../../../services/style_analysis_service.dart';
+import '../../../services/style_outfit_history_service.dart';
 import '../../../services/token_service.dart';
 import '../../../services/ad_service.dart';
+import '../../../l10n/app_translations.dart';
 
 class StyleAnalysisTab extends StatefulWidget {
   const StyleAnalysisTab({super.key});
@@ -16,15 +20,17 @@ class _StyleAnalysisTabState extends State<StyleAnalysisTab> {
   bool _isLoading = false;
   bool _hasAnalyzed = false;
   StyleAnalysisResult? _analysisResult;
+  List<StyleOutfitSuggestion> _outfitSuggestions = [];
   String _recommendation = '';
+  String _lastAnalyzedQuery = '';
   
   final TextEditingController _commandController = TextEditingController();
-  String _selectedWeather = 'Güneşli';
-  String _selectedTemp = 'Ilık';
+  String _selectedWeather = AppTranslations.get('sunny');
+  String _selectedTemp = AppTranslations.get('warm');
   bool _isHybrid = false;
 
-  final List<String> _weatherList = ['Güneşli', 'Bulutlu', 'Yağmurlu', 'Karlı'];
-  final List<String> _tempList = ['Sıcak', 'Ilık', 'Soğuk'];
+  List<String> get _weatherList => [AppTranslations.get('sunny'), AppTranslations.get('cloudy'), AppTranslations.get('rainy'), AppTranslations.get('snowy')];
+  List<String> get _tempList => [AppTranslations.get('hot'), AppTranslations.get('warm'), AppTranslations.get('cold')];
 
   Future<void> _getRecommendation() async {
     final command = _commandController.text.trim();
@@ -54,12 +60,21 @@ class _StyleAnalysisTabState extends State<StyleAnalysisTab> {
           isHybrid: _isHybrid,
         ),
         StyleAnalysisService.performFullAnalysis(),
+        _isHybrid
+            ? Future.value(<StyleOutfitSuggestion>[])
+            : StyleAnalysisService.getClosetOutfitSuggestions(
+                command: command,
+                weather: _selectedWeather,
+                temperature: _selectedTemp,
+              ),
       ]);
 
       if (mounted) {
         setState(() {
+          _lastAnalyzedQuery = command;
           _recommendation = results[0] as String;
           _analysisResult = results[1] as StyleAnalysisResult?;
+          _outfitSuggestions = results[2] as List<StyleOutfitSuggestion>;
           _isLoading = false;
           _hasAnalyzed = true;
         });
@@ -69,18 +84,85 @@ class _StyleAnalysisTabState extends State<StyleAnalysisTab> {
     }
   }
 
+  String? _detectMoodTag(String text) {
+    final t = text.toLowerCase();
+    if (t.contains('uzgun') || t.contains('üzgün') || t.contains('mutsuz')) return 'Uzgün';
+    if (t.contains('mutlu') || t.contains('nese') || t.contains('neşe')) return 'Neseli';
+    if (t.contains('kaygi') || t.contains('kaygı') || t.contains('endise') || t.contains('endişe')) {
+      return 'Kaygili';
+    }
+    if (t.contains('ofke') || t.contains('öfke') || t.contains('sinir')) return 'Ofkeli';
+    if (t.contains('sakin') || t.contains('huzur')) return 'Sakin';
+    return null;
+  }
+
+  Future<void> _saveCurrentCombination() async {
+    final query = _commandController.text.trim().isNotEmpty
+        ? _commandController.text.trim()
+        : _lastAnalyzedQuery;
+    if (!_hasAnalyzed) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Önce kombin önerisi oluşturmalısın.')),
+        );
+      }
+      return;
+    }
+    if (query.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Kaydetmek için bir kombin sorgusu gerekli.')),
+        );
+      }
+      return;
+    }
+
+    final record = StyleOutfitRecord(
+      id: '',
+      query: query,
+      sourceMode: _isHybrid ? 'gardrop_disi_oneri' : 'sadece_arsivim',
+      weather: _selectedWeather,
+      temperature: _selectedTemp,
+      recommendation: _recommendation,
+      moodTag: _detectMoodTag(query),
+      createdAt: DateTime.now(),
+      outfits: _outfitSuggestions
+          .where((o) => o.top != null || o.bottom != null || o.shoes != null || o.outerwear != null)
+          .map(
+            (o) => StyleOutfitRecordItem(
+              title: o.title,
+              topImageUrl: o.top?.imageUrl,
+              bottomImageUrl: o.bottom?.imageUrl,
+              shoesImageUrl: o.shoes?.imageUrl,
+              outerwearImageUrl: o.outerwear?.imageUrl,
+            ),
+          )
+          .toList(),
+    );
+
+    final saved = await StyleOutfitHistoryService.saveRecord(record);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          saved ? 'Kombin kaydedildi.' : 'Kombin kaydedilemedi. Oturumunu kontrol edip tekrar dene.',
+        ),
+      ),
+    );
+  }
+
   void _showInsufficientTokensDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.warmCream,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Jetonun Bitti! 😢', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Text('Strateji oluşturmak için ${TokenService.styleStrategyTokenCost} jetona ihtiyacın var. Kısa bir reklam izleyerek 30 jeton kazanabilirsin!'),
+        title: Text(AppTranslations.get('tokensFinished'), style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(AppTranslations.format('tokensFinishedMsg', [TokenService.styleStrategyTokenCost.toString()])),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Daha Sonra', style: TextStyle(color: AppTheme.mutedSage)),
+            child: Text(AppTranslations.get('later'), style: TextStyle(color: AppTheme.mutedSage)),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -91,7 +173,7 @@ class _StyleAnalysisTabState extends State<StyleAnalysisTab> {
                 await TokenService.addTokens(TokenService.adRewardTokens);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Tebrikler! 30 jeton kazandın. 🎉')),
+                    SnackBar(content: Text(AppTranslations.get('tokensEarnedSuccess'))),
                   );
                 }
                 _getRecommendation(); // Token kazanınca tekrar dene
@@ -104,7 +186,7 @@ class _StyleAnalysisTabState extends State<StyleAnalysisTab> {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('Reklam İzle & Kazan'),
+            child: Text(AppTranslations.get('watchAdEarn')),
           ),
         ],
       ),
@@ -125,11 +207,24 @@ class _StyleAnalysisTabState extends State<StyleAnalysisTab> {
             const SizedBox(height: 40),
             const Center(child: CircularProgressIndicator(color: AppTheme.terracotta)),
             const SizedBox(height: 12),
-            const Center(child: Text('Strateji hazırlanıyor...', style: TextStyle(color: AppTheme.mutedSage, fontSize: 13))),
+            Center(child: Text(AppTranslations.get('strategyPreparing'), style: const TextStyle(color: AppTheme.mutedSage, fontSize: 13))),
           ] else if (_hasAnalyzed) ...[
 // ... (rest of build logic)
             const SizedBox(height: 30),
             _buildRecommendationCard(),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _saveCurrentCombination,
+                icon: const Icon(Icons.bookmark_add_outlined),
+                label: const Text('Kombini Kaydet'),
+              ),
+            ),
+            if (!_isHybrid && _outfitSuggestions.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              _buildOutfitSuggestionCard(),
+            ],
             const SizedBox(height: 24),
             if (_analysisResult != null) ...[
               _buildStyleDNACard(),
@@ -157,13 +252,13 @@ class _StyleAnalysisTabState extends State<StyleAnalysisTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Stil Komutu', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.mutedSage, letterSpacing: 1)),
+          Text(AppTranslations.get('styleCommand'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.mutedSage, letterSpacing: 1)),
           const SizedBox(height: 12),
           TextField(
             controller: _commandController,
             maxLength: 50,
             decoration: InputDecoration(
-              hintText: 'Örn: Şık bir akşam yemeği kombini...',
+              hintText: AppTranslations.get('styleCommandHint'),
               hintStyle: TextStyle(color: AppTheme.mutedSage.withOpacity(0.5), fontSize: 14),
               filled: true,
               fillColor: AppTheme.warmCream.withOpacity(0.5),
@@ -172,16 +267,16 @@ class _StyleAnalysisTabState extends State<StyleAnalysisTab> {
             ),
           ),
           const SizedBox(height: 20),
-          const Text('Öneri Modu', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.mutedSage)),
+          Text(AppTranslations.get('recommendationMode'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.mutedSage)),
           const SizedBox(height: 8),
           Row(
             children: [
-              _buildSelectionChip('Sadece Arşivim', !_isHybrid, (val) => setState(() => _isHybrid = false)),
-              _buildSelectionChip('Hibrit (Önerili)', _isHybrid, (val) => setState(() => _isHybrid = true)),
+              _buildSelectionChip(AppTranslations.get('onlyArchive'), !_isHybrid, (val) => setState(() => _isHybrid = false)),
+              _buildSelectionChip(AppTranslations.get('hybridMode'), _isHybrid, (val) => setState(() => _isHybrid = true)),
             ],
           ),
           const SizedBox(height: 20),
-          const Text('Hava Durumu', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.mutedSage)),
+          Text(AppTranslations.get('weather'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.mutedSage)),
           const SizedBox(height: 8),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -190,7 +285,7 @@ class _StyleAnalysisTabState extends State<StyleAnalysisTab> {
             ),
           ),
           const SizedBox(height: 12),
-          const Text('Sıcaklık', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.mutedSage)),
+          Text(AppTranslations.get('temperature'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.mutedSage)),
           const SizedBox(height: 8),
           Row(
             children: _tempList.map((t) => _buildSelectionChip(t, _selectedTemp == t, (val) => setState(() => _selectedTemp = t))).toList(),
@@ -207,7 +302,7 @@ class _StyleAnalysisTabState extends State<StyleAnalysisTab> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 elevation: 0,
               ),
-              child: const Text('STRATEJİ OLUŞTUR', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
+              child: Text(AppTranslations.get('createStrategy'), style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
             ),
           ),
         ],
@@ -254,11 +349,11 @@ class _StyleAnalysisTabState extends State<StyleAnalysisTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.auto_awesome, color: Colors.white, size: 20),
-              SizedBox(width: 8),
-              Text('ÖZEL KOMBİN STRATEJİSİ', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1, fontSize: 13)),
+              const Icon(Icons.auto_awesome, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Text(AppTranslations.get('personalizedStrategy'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1, fontSize: 13)),
             ],
           ),
           const SizedBox(height: 16),
@@ -283,7 +378,7 @@ class _StyleAnalysisTabState extends State<StyleAnalysisTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('GÜNCEL STİL ANALİZİ', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1, fontSize: 13, color: AppTheme.mutedSage)),
+          Text(AppTranslations.get('currentStyleAnalysis'), style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1, fontSize: 13, color: AppTheme.mutedSage)),
           const SizedBox(height: 20),
           ..._analysisResult!.styleArchetypes.entries.map((e) => Padding(
             padding: const EdgeInsets.only(bottom: 16),
@@ -314,6 +409,127 @@ class _StyleAnalysisTabState extends State<StyleAnalysisTab> {
     );
   }
 
+  Widget _buildOutfitSuggestionCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppTheme.softBorder),
+        boxShadow: AppTheme.cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Bugun Bunlari Giy',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              color: AppTheme.forestCharcoal,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ..._outfitSuggestions.map(
+            (outfit) => Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.warmCream,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppTheme.softBorder),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    outfit.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      color: AppTheme.forestCharcoal,
+                    ),
+                  ),
+                  if (outfit.reason.trim().isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      outfit.reason,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.mutedSage,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                  if ((outfit.missingNote ?? '').isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      outfit.missingNote!,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.terracotta,
+                        fontWeight: FontWeight.w600,
+                        height: 1.3,
+                      ),
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        if (outfit.top != null) _buildPieceImage(outfit.top!, 'Ust'),
+                        if (outfit.bottom != null) _buildPieceImage(outfit.bottom!, 'Alt'),
+                        if (outfit.shoes != null) _buildPieceImage(outfit.shoes!, 'Ayakkabi'),
+                        if (outfit.outerwear != null) _buildPieceImage(outfit.outerwear!, 'Dis Giyim'),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPieceImage(StyleItem item, String label) {
+    return SizedBox(
+      width: 88,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Image.network(
+              item.imageUrl,
+              width: 88,
+              height: 100,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                width: 88,
+                height: 100,
+                color: AppTheme.sandBeige,
+                alignment: Alignment.center,
+                child: const Icon(Icons.broken_image_outlined, size: 18),
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildColorHarmonyCard() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -325,9 +541,9 @@ class _StyleAnalysisTabState extends State<StyleAnalysisTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('RENK UYUMU VE TAMAMLAYICILAR', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1, fontSize: 13, color: AppTheme.mutedSage)),
+          Text(AppTranslations.get('colorHarmony'), style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1, fontSize: 13, color: AppTheme.mutedSage)),
           const SizedBox(height: 20),
-          const Text('Baskın Renklerin', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+          Text(AppTranslations.get('dominantColors'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
@@ -335,7 +551,7 @@ class _StyleAnalysisTabState extends State<StyleAnalysisTab> {
             children: _analysisResult!.primaryColors.map((c) => _buildColorBubble(c, isPrimary: true)).toList(),
           ),
           const SizedBox(height: 20),
-          const Text('Kombini Güçlendirecek Renkler', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.sageGreen)),
+          Text(AppTranslations.get('complementaryColors'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.sageGreen)),
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
@@ -374,9 +590,14 @@ class _StyleAnalysisTabState extends State<StyleAnalysisTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('EKSİK PARÇA DEDEKTİFİ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.sageGreen)),
+                Text(AppTranslations.get('missingPiece'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.sageGreen)),
                 const SizedBox(height: 4),
-                Text(_analysisResult!.shoppingAdvice, style: const TextStyle(fontSize: 14, height: 1.4)),
+                Text(
+                  _analysisResult!.shoppingAdvice.trim().isNotEmpty
+                      ? _analysisResult!.shoppingAdvice
+                      : 'Eksik parca analizi icin tekrar strateji olustur.',
+                  style: const TextStyle(fontSize: 14, height: 1.4),
+                ),
               ],
             ),
           ),
@@ -399,14 +620,14 @@ class _StyleAnalysisTabState extends State<StyleAnalysisTab> {
             child: const Icon(Icons.auto_fix_high_rounded, size: 64, color: AppTheme.terracotta),
           ),
           const SizedBox(height: 24),
-          const Text('Stil Stratejinizi Kurun', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          Text(AppTranslations.get('setupStrategy'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 40),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Text(
-              'User DNA verileriniz ve gardırobunuz hazır. Bir hava durumu seçin ve ne yapmak istediğinizi yazın.',
+              AppTranslations.get('setupStrategyDesc'),
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: AppTheme.mutedSage, height: 1.5),
+              style: const TextStyle(fontSize: 14, color: AppTheme.mutedSage, height: 1.5),
             ),
           ),
         ],

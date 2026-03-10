@@ -104,18 +104,20 @@ Format: [emoji] [mesaj]
       return;
     }
     
-    // Try to extract emoji from the beginning (emojis are typically 1-2 code units or use surrogate pairs)
-    // Check for common emoji patterns at the start
-    final emojiPattern = RegExp(r'^[\p{Emoji}]', unicode: true);
-    final match = emojiPattern.firstMatch(trimmed);
-    
-    if (match != null) {
-      _emoji = match.group(0) ?? '🌿';
-      _insight = trimmed.substring(match.end).trim();
+    final firstRune = trimmed.runes.first;
+    if (_isLikelyEmoji(firstRune)) {
+      final firstChar = String.fromCharCode(firstRune);
+      _emoji = firstChar;
+      _insight = trimmed.substring(firstChar.length).trim();
     } else {
       _emoji = '🌿';
       _insight = trimmed;
     }
+  }
+
+  bool _isLikelyEmoji(int rune) {
+    return (rune >= 0x1F300 && rune <= 0x1FAFF) ||
+        (rune >= 0x2600 && rune <= 0x27BF);
   }
 
   void _setFallbackInsight() {

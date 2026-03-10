@@ -22,9 +22,9 @@ String buildDynamicContext(String userMessage, String? partnerZodiac) {
   if (lowerMsg.contains('öfke') || lowerMsg.contains('kızgın') || lowerMsg.contains('nefret') || 
       lowerMsg.contains('sinirli') || lowerMsg.contains('bıktım') || lowerMsg.contains('!')) {
     injections.add('''### DUYGU TESPİTİ: ÖFKE/HIRS
-STRATEJİ: Kullanıcının öfkesini yumuşatma ama onu bastırma.
-- Eğer 'Harsh' modundaysan: Öfkesini haklı çıkar ama yönünü değiştir. ("Haklısın, bu tam bir saçmalık ama enerjini buna harcama.")
-- Eğer 'Comfort' modundaysan: Sakinleştirici ol. ("Derin bir nefes al, bu öfke seni yakmasın.")''');
+STRATEJİ: Öfkeyi bastırma, yönlendir.
+- 'Sert' modda: Net sınır koydur, dürtüyle hareketi durdur.
+- 'Şefkatli' modda: Önce sakinleştir, sonra kısa aksiyon ver.''');
   }
 
   if (lowerMsg.contains('üzgün') || lowerMsg.contains('ağla') || lowerMsg.contains('canım yan') || 
@@ -39,9 +39,9 @@ STRATEJİ: Şu an eleştiri veya set taktik zamanı değil.
   if (lowerMsg.contains('kork') || lowerMsg.contains('endişe') || lowerMsg.contains('panik') || 
       lowerMsg.contains('ne yapacağım') || lowerMsg.contains('bilmiyorum')) {
     injections.add('''### DUYGU TESPİTİ: KAYGI/BELİRSİZLİK
-STRATEJİ: Netlik ve Güven ver.
-- Belirsiz cümleler kurma. Net adımlar söyle.
-- "Bunu çözeceğiz", "Kontrol sende" mesajı ver.''');
+STRATEJİ: Netlik ve güven ver.
+- Belirsiz dil kullanma.
+- En fazla 2 somut adım ver.''');
   }
 
   // 3. Senaryo Kartını Çek (Akıllı Niyet Algılama)
@@ -82,6 +82,6 @@ STRATEJİ: Netlik ve Güven ver.
 
   if (injections.isEmpty) return "";
   
-  return "\n### GÜNCEL STRATEJİ VE ANALİZ KARTLARI (BUNLARI BAĞLAMA YEDİR):\n${injections.join('\n\n')}\n";
+  return "\n### GÜNCEL STRATEJİ VE ANALİZ KARTLARI (BAĞLAMA DOĞAL ŞEKİLDE YEDİR):\n${injections.join('\n\n')}\n";
 }
 

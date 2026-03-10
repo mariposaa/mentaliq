@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
+import '../../l10n/app_translations.dart';
 import '../../config/app_constants.dart';
 import '../chat/chat_screen.dart';
 import '../rooms/test_execution_screen.dart';
@@ -19,9 +20,9 @@ class TestsRoomScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.forestCharcoal),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Zihin Testleri',
-          style: TextStyle(color: AppTheme.forestCharcoal, fontWeight: FontWeight.bold),
+        title: Text(
+          AppTranslations.get('mindTests'),
+          style: const TextStyle(color: AppTheme.forestCharcoal, fontWeight: FontWeight.bold),
         ),
       ),
       body: SingleChildScrollView(
@@ -31,9 +32,9 @@ class TestsRoomScreen extends StatelessWidget {
           children: [
             _buildHeaderCard(),
             const SizedBox(height: 32),
-            const Text(
-              'Mevcut Testler',
-              style: TextStyle(
+            Text(
+              AppTranslations.get('availableTests'),
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: AppTheme.forestCharcoal,
@@ -58,19 +59,19 @@ class TestsRoomScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Text(
-            'Kendini Verilerle Keşfet',
-            style: TextStyle(
+          Text(
+            AppTranslations.get('discoverWithData'),
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: AppTheme.forestCharcoal,
             ),
           ),
           const SizedBox(height: 12),
-          const Text(
-            'Yapay zeka destekli testlerimizle bilişsel yeteneklerini, duygusal zekanı ve karakter yapını derinlemesine analiz et.',
+          Text(
+            AppTranslations.get('testsDescription'),
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 14,
               color: AppTheme.mutedSage,
               height: 1.5,
@@ -93,12 +94,12 @@ class TestsRoomScreen extends StatelessWidget {
                     color: AppTheme.sageGreen.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: const Column(
+                  child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.psychology_rounded, size: 48, color: AppTheme.sageGreen),
-                      SizedBox(height: 8),
-                      Text('Zihin Analizi Modülü', style: TextStyle(color: AppTheme.sageGreen, fontWeight: FontWeight.bold)),
+                      const Icon(Icons.psychology_rounded, size: 48, color: AppTheme.sageGreen),
+                      const SizedBox(height: 8),
+                      Text(AppTranslations.get('mindAnalysisModule'), style: const TextStyle(color: AppTheme.sageGreen, fontWeight: FontWeight.bold)),
                     ],
                   ),
                 );
@@ -114,48 +115,48 @@ class TestsRoomScreen extends StatelessWidget {
     final tests = [
       {
         'id': 'iq_testi',
-        'title': 'IQ Testi',
-        'subtitle': 'Bilişsel Yetenek',
+        'title': AppTranslations.get('iqTest'),
+        'subtitle': AppTranslations.get('cognitiveAbility'),
         'icon': '🧩',
         'color': AppTheme.sageGreen,
         'tokens': '20',
       },
       {
         'id': 'eq_testi',
-        'title': 'EQ Testi',
-        'subtitle': 'Duygusal Zeka',
+        'title': AppTranslations.get('eqTest'),
+        'subtitle': AppTranslations.get('emotionalIntelligence'),
         'icon': '❤️',
         'color': AppTheme.terracotta,
         'tokens': '15',
       },
       {
         'id': 'travma_analizi',
-        'title': 'Travma Analizi',
-        'subtitle': 'Duygusal Yükler',
+        'title': AppTranslations.get('traumaAnalysis'),
+        'subtitle': AppTranslations.get('emotionalBurdens'),
         'icon': '🩹',
         'color': Colors.blueGrey,
         'tokens': '25',
       },
       {
         'id': 'mbti_kisilik',
-        'title': 'MBTI Kişilik',
-        'subtitle': 'Karakter Tipi',
+        'title': AppTranslations.get('mbtiPersonality'),
+        'subtitle': AppTranslations.get('characterType'),
         'icon': '🎭',
         'color': Colors.indigo,
         'tokens': '15',
       },
       {
         'id': 'anksiyete_olcegi',
-        'title': 'Anksiyete Ölçeği',
-        'subtitle': 'Stres Seviyesi',
+        'title': AppTranslations.get('anxietyScale'),
+        'subtitle': AppTranslations.get('stressLevel'),
         'icon': '🌪️',
         'color': Colors.orangeAccent,
         'tokens': '10',
       },
       {
         'id': 'sevgi_dili',
-        'title': 'Sevgi Dili',
-        'subtitle': 'İlişki Tarzı',
+        'title': AppTranslations.get('loveLanguage'),
+        'subtitle': AppTranslations.get('relationshipStyle'),
         'icon': '💌',
         'color': Colors.pinkAccent,
         'tokens': '10',

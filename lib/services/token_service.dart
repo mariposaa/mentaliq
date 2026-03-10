@@ -2,11 +2,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'auth_service.dart';
 
+enum TokenConsumeResult { successPaid, successFree, insufficient, error }
+
 /// Static token service - NeyBu style
 class TokenService {
   static const int _initialTokens = 100;
   static const int _messageTokenCost = 5;
   static const int _analysisTokenCost = 15; // İlişki analizi bedeli
+  static const int _relationshipAnalysisTokenCost = 30; // Derin ilişki analizi bedeli
   static const int _astroHudTokenCost = 10; // Astroloji HUD bedeli
   static const int _astroCardTokenCost = 10; // Paylaşım kartı bedeli
   static const int _styleStrategyTokenCost = 10; // Stil stratejisi bedeli
@@ -15,6 +18,8 @@ class TokenService {
   static const int _campfireSessionTokenCost = 20; // Kamp atesi oturum bedeli
   static const int _astroGuidanceTokenCost = 15; // Günlük astroloji yönerge bedeli
   static const int _adRewardTokens = 30;
+  static const int _addictionUseTokenCost = 5;
+  static const String _addictionFirstUseField = 'addictionFirstUseConsumed';
 
   /// Get current token balance
   static Future<int> getBalance() async {
@@ -157,6 +162,37 @@ class TokenService {
       return true;
     } catch (e) {
       debugPrint('Error using tokens for analysis: $e');
+      return false;
+    }
+  }
+
+  /// Check if has enough tokens for relationship deep analysis (30 tokens)
+  static Future<bool> hasEnoughTokensForRelationshipAnalysis() async {
+    final balance = await getBalance();
+    return balance >= _relationshipAnalysisTokenCost;
+  }
+
+  /// Use tokens for relationship deep analysis (30 tokens)
+  static Future<bool> useTokensForRelationshipAnalysis() async {
+    try {
+      final userId = AuthService.userId;
+      if (userId == null) return false;
+
+      final balance = await getBalance();
+      if (balance < _relationshipAnalysisTokenCost) {
+        debugPrint('Insufficient tokens for relationship analysis: $balance < $_relationshipAnalysisTokenCost');
+        return false;
+      }
+
+      await AuthService.firestore.collection('users').doc(userId).set({
+        'tokens': FieldValue.increment(-_relationshipAnalysisTokenCost),
+        'lastUsedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      debugPrint('Tokens used for relationship analysis: -$_relationshipAnalysisTokenCost');
+      return true;
+    } catch (e) {
+      debugPrint('Error using tokens for relationship analysis: $e');
       return false;
     }
   }
@@ -366,10 +402,45 @@ class TokenService {
   // Getters
   static int get messageTokenCost => _messageTokenCost;
   static int get analysisTokenCost => _analysisTokenCost;
+  static int get relationshipAnalysisTokenCost => _relationshipAnalysisTokenCost;
   static int get adRewardTokens => _adRewardTokens;
   static int get initialTokens => _initialTokens;
   static int get styleStrategyTokenCost => _styleStrategyTokenCost;
   static int get astroGuidanceTokenCost => _astroGuidanceTokenCost;
   static int get campfireJoinCost => _campfireJoinTokenCost;
   static int get campfireSessionCost => _campfireSessionTokenCost;
+  static int get addictionUseTokenCost => _addictionUseTokenCost;
+
+  static Future<TokenConsumeResult> consumeAddictionUsage() async {
+    try {
+      final userId = AuthService.userId;
+      if (userId == null) return TokenConsumeResult.error;
+      final docRef = AuthService.firestore.collection('users').doc(userId);
+      final doc = await docRef.get();
+      final data = doc.data() ?? const <String, dynamic>{};
+      final firstUseConsumed = data[_addictionFirstUseField] == true;
+
+      if (!firstUseConsumed) {
+        await docRef.set({
+          _addictionFirstUseField: true,
+          'lastUsedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+        return TokenConsumeResult.successFree;
+      }
+
+      final balance = await getBalance();
+      if (balance < _addictionUseTokenCost) {
+        return TokenConsumeResult.insufficient;
+      }
+
+      await docRef.set({
+        'tokens': FieldValue.increment(-_addictionUseTokenCost),
+        'lastUsedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      return TokenConsumeResult.successPaid;
+    } catch (e) {
+      debugPrint('Error consuming addiction usage tokens: $e');
+      return TokenConsumeResult.error;
+    }
+  }
 }

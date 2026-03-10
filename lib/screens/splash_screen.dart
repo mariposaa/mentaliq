@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
+import '../l10n/app_translations.dart';
 import 'home/home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -14,6 +17,7 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
+  Timer? _navigateTimer;
 
   @override
   void initState() {
@@ -43,36 +47,34 @@ class _SplashScreenState extends State<SplashScreen>
     
     // Navigate after animation completes - NO WAITING for any service
     // Everything is already initialized in main.dart
-    _navigateAfterDelay();
+    _scheduleNavigation();
   }
 
-  Future<void> _navigateAfterDelay() async {
-    // Just show the splash for a nice duration, then navigate
-    // All services are already ready from main.dart
-    await Future.delayed(const Duration(milliseconds: 2000));
-    
-    if (!mounted) return;
-    
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            const HomeScreen(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: ScaleTransition(
-              scale: Tween<double>(begin: 1.05, end: 1.0).animate(animation),
-              child: child,
-            ),
-          );
-        },
-        transitionDuration: const Duration(milliseconds: 500),
-      ),
-    );
+  void _scheduleNavigation() {
+    _navigateTimer = Timer(const Duration(milliseconds: 2000), () {
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const HomeScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(
+              opacity: animation,
+              child: ScaleTransition(
+                scale: Tween<double>(begin: 1.05, end: 1.0).animate(animation),
+                child: child,
+              ),
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 500),
+        ),
+      );
+    });
   }
 
   @override
   void dispose() {
+    _navigateTimer?.cancel();
     _animationController.dispose();
     super.dispose();
   }
@@ -101,7 +103,7 @@ class _SplashScreenState extends State<SplashScreen>
                         borderRadius: BorderRadius.circular(32),
                         boxShadow: [
                           BoxShadow(
-                            color: AppTheme.sageGreen.withOpacity(0.4),
+                            color: AppTheme.sageGreen.withValues(alpha: 0.4),
                             blurRadius: 30,
                             offset: const Offset(0, 10),
                           ),
@@ -125,9 +127,8 @@ class _SplashScreenState extends State<SplashScreen>
                       ),
                     ),
                     const SizedBox(height: 12),
-                    // Tagline
                     Text(
-                      'seni anlıyorum',
+                      AppTranslations.get('appTagline'),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: AppTheme.mutedSage,
                         fontSize: 14,

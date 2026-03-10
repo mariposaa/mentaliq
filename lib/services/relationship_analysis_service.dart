@@ -17,6 +17,7 @@ class RelationshipAnalysisService {
   static GenerativeModel? _model;
   static bool _isAnalyzing = false;
   static const _uuid = Uuid();
+  static const int _minMessagesForDeepAnalysis = 6;
 
   static bool get isAnalyzing => _isAnalyzing;
 
@@ -38,8 +39,11 @@ Cevabı tam olarak şu anahtarlarla (keys) üret:
 
 1.  **score (0-100):** İlişkinin sağlık puanı.
 2.  **title (String):** Durumu özetleyen vurucu başlık. (Örn: "Toksik Sarmal", "Gizli Hayranlık").
-3.  **analysis (String):** Senin öznel değerlendirmen. Neden bu puanı verdin? Temel sorun ne? (Max 3 cümle).
-4.  **personality_clash (String):** Kullanıcı ve Partner arasındaki karakter çatışması analizi. (Örn: "Senin duygusallığın vs. Onun mantıkçılığı").
+3.  **analysis (String):** Senin öznel değerlendirmen. Neden bu puanı verdin? Temel sorun ne? 
+    Bu metinde mutlaka şu 2 şeyi belirt:
+    - Manipülasyon baskın tarafı (Kullanıcı / Partner / Karşılıklı / Belirsiz)
+    - Yalan/tutarsızlık sinyali (Düşük / Orta / Yüksek)
+4.  **personality_clash (String):** Kullanıcı ve Partner arasındaki karakter çatışması analizi.
 5.  **recommendations (Array):** Senin "kendi düşüncene göre" kullanıcıya verdiğin özel tavsiyeler listesi.
     * **type:** Tavsiye türü ('communication', 'action', 'mindset').
     * **text:** Tavsiye metni.
@@ -55,7 +59,7 @@ Cevabı tam olarak şu anahtarlarla (keys) üret:
         generationConfig: GenerationConfig(
           temperature: 0.4, // Düşük - tutarlı JSON çıktısı
           topP: 0.9,
-          maxOutputTokens: 1024,
+          maxOutputTokens: 2800,
         ),
       );
       debugPrint('RelationshipAnalysisService initialized');
@@ -135,6 +139,39 @@ $dataPackage
       return null;
     } finally {
       _isAnalyzing = false;
+    }
+  }
+
+  /// Checks whether there is enough data to run deep analysis.
+  static Future<RelationshipAnalysisReadiness> getReadinessStatus() async {
+    try {
+      final partner = await PartnerService.getPrimaryPartner();
+      final hasPartner = partner != null;
+      final messageCount = await _getRecentUserMessageCount();
+      final enoughMessages = messageCount >= _minMessagesForDeepAnalysis;
+
+      final missing = <String>[];
+      if (!hasPartner) missing.add('Partner bilgisi eksik');
+      if (!enoughMessages) {
+        missing.add('Yeterli konuşma verisi yok (${messageCount}/$_minMessagesForDeepAnalysis)');
+      }
+
+      return RelationshipAnalysisReadiness(
+        isReady: hasPartner && enoughMessages,
+        hasPartner: hasPartner,
+        userMessageCount: messageCount,
+        minRequiredMessages: _minMessagesForDeepAnalysis,
+        missingReasons: missing,
+      );
+    } catch (e) {
+      debugPrint('Readiness check failed: $e');
+      return RelationshipAnalysisReadiness(
+        isReady: false,
+        hasPartner: false,
+        userMessageCount: 0,
+        minRequiredMessages: _minMessagesForDeepAnalysis,
+        missingReasons: const ['Veri kontrolü sırasında hata oluştu'],
+      );
     }
   }
 
@@ -220,6 +257,45 @@ ${messages.take(15).join('\n')}
     } catch (e) {
       debugPrint('Error getting recent messages: $e');
       return '[SON MESAJLAR: Veri alınamadı]';
+    }
+  }
+
+  static Future<int> _getRecentUserMessageCount() async {
+    try {
+      final uid = AuthService.userId;
+      if (uid == null) return 0;
+
+      final sessionsSnapshot = await AuthService.firestore
+          .collection('users')
+          .doc(uid)
+          .collection('chats')
+          .where('category', isEqualTo: 'iliskiler')
+          .orderBy('lastMessageAt', descending: true)
+          .limit(3)
+          .get();
+
+      if (sessionsSnapshot.docs.isEmpty) return 0;
+
+      int count = 0;
+      for (final session in sessionsSnapshot.docs) {
+        final messagesSnapshot = await session.reference
+            .collection('messages')
+            .orderBy('timestamp', descending: true)
+            .limit(12)
+            .get();
+
+        for (final msgDoc in messagesSnapshot.docs) {
+          final data = msgDoc.data();
+          final isUser = data['isUser'] as bool? ?? false;
+          final content = (data['content'] as String? ?? '').trim();
+          if (isUser && content.isNotEmpty) count++;
+        }
+      }
+
+      return count;
+    } catch (e) {
+      debugPrint('Error counting recent user messages: $e');
+      return 0;
     }
   }
 
@@ -337,4 +413,20 @@ ${messages.take(15).join('\n')}
       debugPrint('Error toggling recommendation: $e');
     }
   }
+}
+
+class RelationshipAnalysisReadiness {
+  final bool isReady;
+  final bool hasPartner;
+  final int userMessageCount;
+  final int minRequiredMessages;
+  final List<String> missingReasons;
+
+  const RelationshipAnalysisReadiness({
+    required this.isReady,
+    required this.hasPartner,
+    required this.userMessageCount,
+    required this.minRequiredMessages,
+    required this.missingReasons,
+  });
 }

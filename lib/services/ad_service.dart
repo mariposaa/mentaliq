@@ -1,92 +1,121 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-/// Ad Service - Handles rewarded ads for token rewards
-/// AdMob integration placeholder - IDs will be added later
+/// Ad Service - iOS rewarded ads are active.
 class AdService {
+  // iOS AdMob IDs (provided by user)
+  static const String _iosRewardedAdUnitId = 'ca-app-pub-8177405180533300/7704210405';
+
   static bool _isInitialized = false;
   static bool _isAdLoading = false;
   static bool _isAdReady = false;
+  static RewardedAd? _rewardedAd;
 
   static bool get isInitialized => _isInitialized;
   static bool get isAdReady => _isAdReady;
 
-  // TODO: AdMob IDs - will be added later
-  // static const String _rewardedAdUnitId = 'ca-app-pub-xxxxx/xxxxx';
+  static bool get _isIos => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
-  /// Initialize AdMob
+  /// Initialize AdMob (iOS active, others fallback)
   static Future<void> initialize() async {
     try {
-      // TODO: Initialize AdMob
-      // await MobileAds.instance.initialize();
+      if (_isIos) {
+        await MobileAds.instance.initialize();
+        _isInitialized = true;
+        debugPrint('AdService: iOS AdMob initialized');
+        await loadRewardedAd();
+        return;
+      }
+
+      // Fallback for non-iOS platforms in this release
       _isInitialized = true;
-      debugPrint('AdService: Initialized (placeholder)');
-      
-      // Pre-load first ad
-      await loadRewardedAd();
+      _isAdReady = true;
+      debugPrint('AdService: Non-iOS fallback mode enabled');
     } catch (e) {
       debugPrint('AdService: Init error - $e');
     }
   }
 
-  /// Load a rewarded ad
+  /// Load rewarded ad
   static Future<void> loadRewardedAd() async {
     if (_isAdLoading) return;
-    
     _isAdLoading = true;
-    debugPrint('AdService: Loading rewarded ad...');
+    _isAdReady = false;
 
-    try {
-      // TODO: Load AdMob rewarded ad
-      // RewardedAd.load(
-      //   adUnitId: _rewardedAdUnitId,
-      //   request: const AdRequest(),
-      //   rewardedAdLoadCallback: RewardedAdLoadCallback(...)
-      // );
-      
-      // Placeholder: Simulate ad loaded
-      await Future.delayed(const Duration(milliseconds: 500));
+    if (!_isIos) {
+      _isAdLoading = false;
       _isAdReady = true;
-      _isAdLoading = false;
-      debugPrint('AdService: Rewarded ad ready (placeholder)');
-    } catch (e) {
-      _isAdLoading = false;
-      debugPrint('AdService: Load error - $e');
+      return;
     }
+
+    await RewardedAd.load(
+      adUnitId: _iosRewardedAdUnitId,
+      request: const AdRequest(),
+      rewardedAdLoadCallback: RewardedAdLoadCallback(
+        onAdLoaded: (ad) {
+          _rewardedAd?.dispose();
+          _rewardedAd = ad;
+          _isAdLoading = false;
+          _isAdReady = true;
+          debugPrint('AdService: iOS rewarded ad loaded');
+        },
+        onAdFailedToLoad: (error) {
+          _isAdLoading = false;
+          _isAdReady = false;
+          debugPrint('AdService: Rewarded load failed - $error');
+        },
+      ),
+    );
   }
 
-  /// Show rewarded ad and return true if user earned reward
+  /// Show rewarded ad and return true if reward earned
   static Future<bool> showRewardedAd() async {
-    if (!_isAdReady) {
-      debugPrint('AdService: No ad ready, loading...');
-      await loadRewardedAd();
-      
-      // If still not ready, return false
-      if (!_isAdReady) {
-        debugPrint('AdService: Could not load ad');
-        return false;
-      }
+    if (!_isIos) {
+      // Fallback in non-iOS for now.
+      return true;
     }
 
-    debugPrint('AdService: Showing simulated rewarded ad...');
-    try {
-      // Placeholder: Simulate ad watched successfully (NeyBu style for testing)
-      await Future.delayed(const Duration(seconds: 2));
-      _isAdReady = false;
-      
-      // Pre-load next ad simulation
-      loadRewardedAd();
-      
-      debugPrint('AdService: Ad watched, reward earned (Simulated)');
-      return true;
-    } catch (e) {
-      debugPrint('AdService: Show error - $e');
-      return false;
+    if (_rewardedAd == null || !_isAdReady) {
+      await loadRewardedAd();
+      if (_rewardedAd == null) return false;
     }
+
+    final completer = Completer<bool>();
+    bool rewardEarned = false;
+    final ad = _rewardedAd!;
+    _rewardedAd = null;
+    _isAdReady = false;
+
+    ad.fullScreenContentCallback = FullScreenContentCallback(
+      onAdDismissedFullScreenContent: (ad) {
+        ad.dispose();
+        if (!completer.isCompleted) {
+          completer.complete(rewardEarned);
+        }
+        loadRewardedAd();
+      },
+      onAdFailedToShowFullScreenContent: (ad, error) {
+        ad.dispose();
+        if (!completer.isCompleted) {
+          completer.complete(false);
+        }
+        loadRewardedAd();
+        debugPrint('AdService: Failed to show rewarded - $error');
+      },
+    );
+
+    ad.show(
+      onUserEarnedReward: (ad, reward) {
+        rewardEarned = true;
+      },
+    );
+
+    return completer.future;
   }
 
-
-  /// Check if ad is available
   static bool isAdAvailable() {
-    return _isAdReady || _isInitialized; // Always available in placeholder mode
+    if (_isIos) return _isAdReady;
+    return _isInitialized;
   }
 }

@@ -5,6 +5,7 @@ import '../config/app_locale.dart';
 import '../models/partner_model.dart';
 import 'partner_service.dart';
 import 'user_dna_service.dart';
+import 'memory_trigger_config_service.dart';
 
 /// Shadow Memory Service - Background AI that updates partner profile AND user DNA
 /// Runs silently after each conversation to extract new information
@@ -125,6 +126,7 @@ Aşağıdaki kullanıcı mesajını analiz et. Amacın üç şeyi güncel tutmak
       final partnerInfo = partner != null 
           ? 'Mevcut Partner İsmi: ${partner.name}'
           : 'Partner bilgisi yok';
+      final triggerTags = await _detectTriggerTags(userMessage);
       
       final prompt = '''
 $_shadowMemoryPrompt
@@ -132,6 +134,7 @@ $_shadowMemoryPrompt
 ### GİRDİ:
 Kullanıcı Mesajı: "$userMessage"
 Kategori: ${category ?? 'genel'}
+Tetik Etiketleri: ${triggerTags.isEmpty ? 'yok' : triggerTags.join(', ')}
 $partnerInfo
 ''';
 
@@ -233,7 +236,6 @@ $partnerInfo
     // Thresholds
     const int maxListSize = 15;
     
-    bool needsPruning = false;
     List<String> pruningTargets = [];
     
     if ((dns.triggers?.length ?? 0) > maxListSize) pruningTargets.add('triggers');
@@ -285,7 +287,6 @@ ${targets.contains('goals') ? 'Hedefler (${currentDNA.goals?.length}): ${current
           // Since UserDNAService.merge ADDS to the list, we need to handle this.
           // Solution: We will manually update Firestore to overwrite these specific fields.
           
-          final uid = UserDNAService.currentDNA?.relationshipStatus; // Accessing auth indirectly or need Auth service
           // Actually, UserDNAService has updateDNA which merges. 
           // Let's rely on UserDNAService exposing a 'replace' method or similar.
           // or we can implement a custom overwrite here using Firestore directly if we had access, 
@@ -419,6 +420,31 @@ ${targets.contains('goals') ? 'Hedefler (${currentDNA.goals?.length}): ${current
     ];
 
     return negativeKeywords.any((keyword) => trait.contains(keyword));
+  }
+
+  static Future<List<String>> _detectTriggerTags(String message) async {
+    final text = message.toLowerCase();
+    final cfg = await MemoryTriggerConfigService.getConfig();
+    final tags = <String>[];
+    bool hasAny(List<String> words) =>
+        words.any((w) => w.isNotEmpty && text.contains(w.toLowerCase()));
+
+    if (hasAny(cfg.crisis)) {
+      tags.add('crisis');
+    }
+    if (hasAny(cfg.relationship)) {
+      tags.add('relationship');
+    }
+    if (hasAny(cfg.addiction)) {
+      tags.add('addiction');
+    }
+    if (hasAny(cfg.selfworth)) {
+      tags.add('selfworth');
+    }
+    if (hasAny(cfg.explicit)) {
+      tags.add('explicit');
+    }
+    return tags;
   }
 
   /// Apply Addiction tracking updates to User DNA

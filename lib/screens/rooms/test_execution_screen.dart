@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
+import '../../l10n/app_translations.dart';
 import '../../models/test_model.dart';
 import '../../services/gemini_service.dart';
 import '../../services/token_service.dart';
@@ -99,7 +100,7 @@ Lütfen bu şablonun ötesine geçerek derin analiz yap.
       setState(() => _isAnalyzing = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Analiz sırasında bir hata oluştu. Lütfen tekrar dene.')),
+          SnackBar(content: Text(AppTranslations.get('errorAnalysisFailed'))),
         );
       }
     }
@@ -108,15 +109,15 @@ Lütfen bu şablonun ötesine geçerek derin analiz yap.
   @override
   Widget build(BuildContext context) {
     if (!_tokensDeducted && _analysisResult == null) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: AppTheme.sandBeige,
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(color: AppTheme.sageGreen),
-              SizedBox(height: 16),
-              Text('Token işleminiz kontrol ediliyor...', style: TextStyle(color: AppTheme.mutedSage)),
+              const CircularProgressIndicator(color: AppTheme.sageGreen),
+              const SizedBox(height: 16),
+              Text(AppTranslations.get('checkingTokens'), style: const TextStyle(color: AppTheme.mutedSage)),
             ],
           ),
         ),
@@ -152,7 +153,7 @@ Lütfen bu şablonun ötesine geçerek derin analiz yap.
             ),
             const SizedBox(height: 40),
             Text(
-              'Soru ${_currentQuestionIndex + 1}/${widget.test.questions.length}',
+              '${AppTranslations.get('question')} ${_currentQuestionIndex + 1}/${widget.test.questions.length}',
               style: const TextStyle(color: AppTheme.mutedSage, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
@@ -206,18 +207,18 @@ Lütfen bu şablonun ötesine geçerek derin analiz yap.
             children: [
               const Text('🧘', style: TextStyle(fontSize: 64)),
               const SizedBox(height: 24),
-              const Text(
-                'Analiz Tamamlandı',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.forestCharcoal),
+              Text(
+                AppTranslations.get('analysisCompleted'),
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.forestCharcoal),
               ),
               const SizedBox(height: 16),
               _isAnalyzing 
-                ? const Column(
+                ? Column(
                     children: [
-                      SizedBox(height: 48),
-                      CircularProgressIndicator(color: AppTheme.sageGreen),
-                      SizedBox(height: 16),
-                      Text('AI Zihnini Analiz Ediyor...', style: TextStyle(color: AppTheme.mutedSage)),
+                      const SizedBox(height: 48),
+                      const CircularProgressIndicator(color: AppTheme.sageGreen),
+                      const SizedBox(height: 16),
+                      Text(AppTranslations.get('aiAnalyzing'), style: const TextStyle(color: AppTheme.mutedSage)),
                     ],
                   )
                 : Column(
@@ -245,7 +246,7 @@ Lütfen bu şablonun ötesine geçerek derin analiz yap.
                           minimumSize: const Size(double.infinity, 56),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         ),
-                        child: const Text('Kapat', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        child: Text(AppTranslations.get('close'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),

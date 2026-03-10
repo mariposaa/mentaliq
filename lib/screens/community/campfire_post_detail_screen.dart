@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../config/app_locale.dart';
 import '../../config/app_theme.dart';
+import '../../l10n/app_translations.dart';
 import '../../models/forum_post.dart';
 import '../../models/forum_comment.dart';
 import '../../services/forum_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/admin_role_service.dart';
 import 'forum_post_image.dart';
 
 class CampfirePostDetailScreen extends StatefulWidget {
@@ -22,11 +24,21 @@ class _CampfirePostDetailScreenState extends State<CampfirePostDetailScreen> {
   ForumPost? _post;
   String? _translatedText;
   bool _isTranslating = false;
+  bool _canModerateForum = false;
 
   @override
   void initState() {
     super.initState();
     _loadPost();
+    _loadPermissions();
+  }
+
+  Future<void> _loadPermissions() async {
+    final canModerate = await AdminRoleService.hasPermission(
+      AdminPermission.moderateForum,
+    );
+    if (!mounted) return;
+    setState(() => _canModerateForum = canModerate);
   }
 
   Future<void> _loadPost() async {
@@ -71,25 +83,27 @@ class _CampfirePostDetailScreenState extends State<CampfirePostDetailScreen> {
     if (_post == null) {
       return Scaffold(
         backgroundColor: AppTheme.sandBeige,
-        appBar: AppBar(backgroundColor: AppTheme.sandBeige, title: const Text('Gönderi')),
+        appBar: AppBar(backgroundColor: AppTheme.sandBeige, title: Text(AppTranslations.get('post'))),
         body: const Center(child: CircularProgressIndicator(color: AppTheme.terracotta)),
       );
     }
     final post = _post!;
     final isMine = post.authorId == AuthService.userId;
+    final canDeletePost = isMine || _canModerateForum;
 
     return Scaffold(
       backgroundColor: AppTheme.sandBeige,
       appBar: AppBar(
         backgroundColor: AppTheme.sandBeige,
         elevation: 0,
-        title: const Text('Gönderi', style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.forestCharcoal)),
-        actions: isMine
+        title: Text(AppTranslations.get('post'), style: const TextStyle(fontWeight: FontWeight.w600, color: AppTheme.forestCharcoal)),
+        actions: canDeletePost
             ? [
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined, color: AppTheme.forestCharcoal),
-                  onPressed: () => _showEditPost(context, post),
-                ),
+                if (isMine)
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined, color: AppTheme.forestCharcoal),
+                    onPressed: () => _showEditPost(context, post),
+                  ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.terracotta),
                   onPressed: () => _confirmDeletePost(context, post),
@@ -120,7 +134,7 @@ class _CampfirePostDetailScreenState extends State<CampfirePostDetailScreen> {
                       children: [
                         const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.terracotta)),
                         const SizedBox(width: 8),
-                        Text('Çevriliyor...', style: TextStyle(fontSize: 14, color: AppTheme.mutedSage, fontStyle: FontStyle.italic)),
+                        Text(AppTranslations.get('translating'), style: TextStyle(fontSize: 14, color: AppTheme.mutedSage, fontStyle: FontStyle.italic)),
                       ],
                     )
                   else
@@ -134,7 +148,7 @@ class _CampfirePostDetailScreenState extends State<CampfirePostDetailScreen> {
                             children: [
                               Icon(Icons.translate, size: 12, color: AppTheme.mutedSage),
                               const SizedBox(width: 4),
-                              Text('Orijinal dil: ${post.language.toUpperCase()}', style: TextStyle(fontSize: 11, color: AppTheme.mutedSage)),
+                              Text(AppTranslations.format('originalLanguage', [post.language.toUpperCase()]), style: TextStyle(fontSize: 11, color: AppTheme.mutedSage)),
                             ],
                           ),
                         ],
@@ -146,7 +160,7 @@ class _CampfirePostDetailScreenState extends State<CampfirePostDetailScreen> {
                   const SizedBox(height: 16),
                   const Divider(height: 1),
                   const SizedBox(height: 12),
-                  Text('Yorumlar (${post.commentCount})', style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppTheme.forestCharcoal, fontWeight: FontWeight.w600)),
+                  Text(AppTranslations.format('commentsTitle', ['${post.commentCount}']), style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppTheme.forestCharcoal, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
                   StreamBuilder<List<ForumComment>>(
                     stream: ForumService.watchComments(widget.postId),
@@ -160,7 +174,12 @@ class _CampfirePostDetailScreenState extends State<CampfirePostDetailScreen> {
                         itemBuilder: (_, i) {
                           final c = comments[i];
                           final isMyComment = c.authorId == AuthService.userId;
-                          return _CommentTile(comment: c, postId: widget.postId, isMine: isMyComment);
+                          return _CommentTile(
+                            comment: c,
+                            postId: widget.postId,
+                            isMine: isMyComment,
+                            canModerate: _canModerateForum,
+                          );
                         },
                       );
                     },
@@ -190,13 +209,13 @@ class _CampfirePostDetailScreenState extends State<CampfirePostDetailScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Gönderiyi düzenle', style: Theme.of(ctx).textTheme.titleMedium?.copyWith(color: AppTheme.forestCharcoal)),
+              Text(AppTranslations.get('editPost'), style: Theme.of(ctx).textTheme.titleMedium?.copyWith(color: AppTheme.forestCharcoal)),
               const SizedBox(height: 12),
               TextField(
                 controller: textController,
                 maxLines: 4,
                 decoration: InputDecoration(
-                  hintText: 'Metin',
+                  hintText: AppTranslations.get('text'),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   filled: true,
                   fillColor: AppTheme.sandBeige,
@@ -210,7 +229,7 @@ class _CampfirePostDetailScreenState extends State<CampfirePostDetailScreen> {
                   _loadPost();
                 },
                 style: FilledButton.styleFrom(backgroundColor: AppTheme.terracotta),
-                child: const Text('Kaydet'),
+                child: Text(AppTranslations.get('save')),
               ),
             ],
           ),
@@ -223,17 +242,17 @@ class _CampfirePostDetailScreenState extends State<CampfirePostDetailScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Gönderiyi sil'),
-        content: const Text('Bu gönderiyi silmek istediğinize emin misiniz?'),
+        title: Text(AppTranslations.get('deletePost')),
+        content: Text(AppTranslations.get('deletePostConfirm')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('İptal')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(AppTranslations.get('cancel'))),
           TextButton(
             onPressed: () async {
               await ForumService.deletePost(post.id);
               if (context.mounted) Navigator.pop(ctx);
               if (context.mounted) Navigator.pop(context);
             },
-            child: const Text('Sil', style: TextStyle(color: AppTheme.terracotta)),
+            child: Text(AppTranslations.get('delete'), style: const TextStyle(color: AppTheme.terracotta)),
           ),
         ],
       ),
@@ -290,14 +309,21 @@ class _PostHeader extends StatelessWidget {
 }
 
 class _CommentTile extends StatelessWidget {
-  const _CommentTile({required this.comment, required this.postId, required this.isMine});
+  const _CommentTile({
+    required this.comment,
+    required this.postId,
+    required this.isMine,
+    required this.canModerate,
+  });
 
   final ForumComment comment;
   final String postId;
   final bool isMine;
+  final bool canModerate;
 
   @override
   Widget build(BuildContext context) {
+    final canDelete = isMine || canModerate;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(color: AppTheme.sandBeige, borderRadius: BorderRadius.circular(12)),
@@ -306,15 +332,16 @@ class _CommentTile extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(comment.authorName ?? 'Kullanıcı', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppTheme.forestCharcoal)),
+              Text(comment.authorName ?? AppTranslations.get('user'), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppTheme.forestCharcoal)),
               const SizedBox(width: 8),
               Text(DateFormat('d MMM · HH:mm', 'tr').format(comment.createdAt), style: TextStyle(fontSize: 11, color: AppTheme.mutedSage)),
-              if (isMine) ...[
+              if (canDelete) ...[
                 const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined, size: 18, color: AppTheme.mutedSage),
-                  onPressed: () => _showEditComment(context),
-                ),
+                if (isMine)
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined, size: 18, color: AppTheme.mutedSage),
+                    onPressed: () => _showEditComment(context),
+                  ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline_rounded, size: 18, color: AppTheme.terracotta),
                   onPressed: () => _confirmDeleteComment(context),
@@ -344,9 +371,9 @@ class _CommentTile extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Yorumu düzenle', style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.forestCharcoal)),
+              Text(AppTranslations.get('editComment'), style: const TextStyle(fontWeight: FontWeight.w600, color: AppTheme.forestCharcoal)),
               const SizedBox(height: 12),
-              TextField(controller: controller, maxLines: 3, decoration: InputDecoration(hintText: 'Yorum', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), filled: true, fillColor: AppTheme.sandBeige)),
+              TextField(controller: controller, maxLines: 3, decoration: InputDecoration(hintText: AppTranslations.get('comment'), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), filled: true, fillColor: AppTheme.sandBeige)),
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: () async {
@@ -354,7 +381,7 @@ class _CommentTile extends StatelessWidget {
                   if (ctx.mounted) Navigator.pop(ctx);
                 },
                 style: FilledButton.styleFrom(backgroundColor: AppTheme.terracotta),
-                child: const Text('Kaydet'),
+                child: Text(AppTranslations.get('save')),
               ),
             ],
           ),
@@ -367,16 +394,16 @@ class _CommentTile extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Yorumu sil'),
-        content: const Text('Bu yorumu silmek istediğinize emin misiniz?'),
+        title: Text(AppTranslations.get('deleteComment')),
+        content: Text(AppTranslations.get('deleteCommentConfirm')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('İptal')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(AppTranslations.get('cancel'))),
           TextButton(
             onPressed: () async {
               await ForumService.deleteComment(postId, comment.id);
               if (context.mounted) Navigator.pop(ctx);
             },
-            child: const Text('Sil', style: TextStyle(color: AppTheme.terracotta)),
+            child: Text(AppTranslations.get('delete'), style: const TextStyle(color: AppTheme.terracotta)),
           ),
         ],
       ),
@@ -401,7 +428,7 @@ class _BuildCommentField extends StatelessWidget {
             child: TextField(
               controller: controller,
               decoration: InputDecoration(
-                hintText: 'Yorum yaz...',
+                hintText: AppTranslations.get('writeComment'),
                 filled: true,
                 fillColor: AppTheme.sandBeige,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
@@ -497,7 +524,7 @@ class _DetailSupportButtonState extends State<_DetailSupportButton> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _isSupported ? 'Destekliyorsun!' : 'Seni destekliyorum',
+                  _isSupported ? AppTranslations.get('supporting') : AppTranslations.get('iSupportYou'),
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -505,7 +532,7 @@ class _DetailSupportButtonState extends State<_DetailSupportButton> {
                   ),
                 ),
                 Text(
-                  '$_count kişi destekliyor',
+                  AppTranslations.format('supportCount', ['$_count']),
                   style: TextStyle(fontSize: 12, color: AppTheme.mutedSage),
                 ),
               ],

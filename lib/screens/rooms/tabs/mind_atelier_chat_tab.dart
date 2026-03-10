@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
 import '../../../config/app_theme.dart';
+import '../../../l10n/app_translations.dart';
 import '../../../services/gemini_service.dart';
 import '../../../services/token_service.dart';
 import '../../../services/ad_service.dart';
@@ -31,7 +32,7 @@ class _MindAtelierChatTabState extends State<MindAtelierChatTab> {
     _initSpeech();
     // İlk karşılama mesajı
     _messages.add(_Message(
-      text: "Merhaba. Persona Psikoloji'ye hoş geldin. Burası senin güvenli alanın. Konuşmaya başlamak için mikrofona basabilirsin. Seni dinliyorum.",
+      text: AppTranslations.get('welcomeMindAtelier'),
       isUser: false,
     ));
   }
@@ -160,21 +161,21 @@ class _MindAtelierChatTabState extends State<MindAtelierChatTab> {
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.sandBeige,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.stars_rounded, color: AppTheme.terracotta),
-            SizedBox(width: 10),
-            Text('Tokenlerin Bitti', style: TextStyle(color: AppTheme.forestCharcoal)),
+            const Icon(Icons.stars_rounded, color: AppTheme.terracotta),
+            const SizedBox(width: 10),
+            Text(AppTranslations.get('tokensFinishedMind'), style: const TextStyle(color: AppTheme.forestCharcoal)),
           ],
         ),
-        content: const Text(
-          'Zihin Atölyesi seansına devam etmek için bir reklam izleyerek 30 token kazanabilirsin.',
-          style: TextStyle(color: AppTheme.forestCharcoal),
+        content: Text(
+          AppTranslations.get('tokensFinishedMindMsg'),
+          style: const TextStyle(color: AppTheme.forestCharcoal),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Sonra', style: TextStyle(color: AppTheme.mutedSage)),
+            child: Text(AppTranslations.get('later'), style: const TextStyle(color: AppTheme.mutedSage)),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -185,7 +186,7 @@ class _MindAtelierChatTabState extends State<MindAtelierChatTab> {
               backgroundColor: AppTheme.sageGreen,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('Reklam İzle (30 🪙)', style: TextStyle(color: Colors.white)),
+            child: Text(AppTranslations.get('watchAdBtn'), style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -207,7 +208,7 @@ class _MindAtelierChatTabState extends State<MindAtelierChatTab> {
   Future<void> _analyzeSession() async {
     if (_messages.length < 3) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Analiz için biraz daha konuşmalıyız.')),
+        SnackBar(content: Text(AppTranslations.get('needMoreConversation'))),
       );
       return;
     }
@@ -252,14 +253,14 @@ class _MindAtelierChatTabState extends State<MindAtelierChatTab> {
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Zihin DNA\'nız başarıyla güncellendi!'),
+            SnackBar(
+              content: Text(AppTranslations.get('dnaUpdated')),
               backgroundColor: AppTheme.sageGreen,
             ),
           );
           setState(() {
             _messages.add(_Message(
-              text: "Harika bir seanstı. Paylaştıkların sayesinde senin hakkında daha derin içgörülere sahip oldum. Zihin DNA tabinden güncel karakter haritana bakabilirsin.",
+              text: AppTranslations.get('sessionComplete'),
               isUser: false,
             ));
           });
@@ -287,9 +288,9 @@ class _MindAtelierChatTabState extends State<MindAtelierChatTab> {
                 TextButton.icon(
                   onPressed: _isLoading ? null : _analyzeSession,
                   icon: const Icon(Icons.auto_awesome_rounded, size: 16, color: AppTheme.sageGreen),
-                  label: const Text(
-                    'Analiz Et (15 🪙)',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.sageGreen),
+                  label: Text(
+                    AppTranslations.get('analyzeBtn'),
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.sageGreen),
                   ),
                   style: TextButton.styleFrom(
                     backgroundColor: AppTheme.sageGreen.withOpacity(0.1),
@@ -350,14 +351,14 @@ class _MindAtelierChatTabState extends State<MindAtelierChatTab> {
         color: AppTheme.sageGreen.withOpacity(0.08),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: const Row(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.security_rounded, size: 12, color: AppTheme.sageGreen),
-          SizedBox(width: 6),
+          const Icon(Icons.security_rounded, size: 12, color: AppTheme.sageGreen),
+          const SizedBox(width: 6),
           Text(
-            'Güvenli Alan',
-            style: TextStyle(fontSize: 10, color: AppTheme.forestCharcoal, fontWeight: FontWeight.w600),
+            AppTranslations.get('safeSpace'),
+            style: const TextStyle(fontSize: 10, color: AppTheme.forestCharcoal, fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -394,7 +395,7 @@ class _MindAtelierChatTabState extends State<MindAtelierChatTab> {
           ),
           const SizedBox(height: 8),
           Text(
-            _isListening ? 'Bitirmek için Dokun' : 'Konuşmak için Bas',
+            _isListening ? AppTranslations.get('tapToFinish') : AppTranslations.get('pressToTalk'),
             style: TextStyle(fontSize: 11, color: AppTheme.mutedSage),
           ),
         ],

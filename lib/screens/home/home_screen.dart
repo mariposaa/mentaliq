@@ -1,21 +1,25 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../config/app_theme.dart';
 import '../../config/app_constants.dart';
+import '../../l10n/app_translations.dart';
+import '../../providers/language_provider.dart';
 import '../../services/auth_service.dart';
+import '../../services/admin_role_service.dart';
 import '../../services/token_service.dart';
 import '../../services/mood_service.dart';
+import '../../widgets/language_picker.dart';
+import '../../widgets/token_dialog.dart';
 import '../chat/chat_screen.dart';
 import '../rooms/relationship_room_screen.dart';
-import '../rooms/motivation_room_screen.dart';
 import '../rooms/astrology_dream_room_screen.dart';
+import '../rooms/dream_room_screen.dart';
 import '../rooms/style_room_screen.dart';
 import '../rooms/mind_atelier_room_screen.dart';
-import '../rooms/tests_room_screen.dart';
 import '../modules/addiction_module_screen.dart';
 import '../community/campfire_forum_screen.dart';
 import '../notifications/notifications_screen.dart';
-import '../admin/admin_login_dialog.dart';
 import '../admin/admin_panel_screen.dart';
 import '../auth/auth_screen.dart';
 
@@ -29,59 +33,60 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedNavIndex = 0;
   bool _isMoodBarExpanded = false;
-  String? _selectedMoodId;  // Now stores mood ID, not emoji
+  String? _selectedMoodId; // Now stores mood ID, not emoji
   late TextEditingController _nameController;
   bool _isEditingName = false;
-  
+
   // Announcement Panel Logic
   late PageController _pageController;
   int _currentPage = 0;
   Timer? _timer;
-  
-  final List<Map<String, dynamic>> _announcements = [
-    {
-      'title': 'Sessiz Uyumun Matematiği', // S.U.M. Tribute
-      'subtitle': 'Milyarlarca veri noktası arasında bazı frekanslar hesaplanamaz. Bu sistem, standart kalıpların ötesindeki o eşsiz anlaşılma hissinin peşindedir.',
-      'icon': '💎',
-      'color': const Color(0xFF5DADE2), // Serene Sky Blue
-    },
-    {
-      'title': 'Zihin DNA\'nı Keşfet',
-      'subtitle': 'Yaptığın her derin konuşma, karakter haritandaki travmaları, güçlü yönleri ve hedefleri gerçek zamanlı güncelleyerek sana özel bir rehberlik sunar.',
-      'icon': '🧠',
-      'color': const Color(0xFF6B8E23), // Sage Green
-    },
-    {
-      'title': 'Kozmik Veri & Rüya Analizi',
-      'subtitle': 'Cyber-Mistik motoruyla rüyalarının derin psikolojik anlamlarını çözebilir, doğum haritanın bugünkü kozmik etkilerle olan stratejik bağını keşfedebilirsin.',
-      'icon': '🌌',
-      'color': const Color(0xFF483D8B), // Dark Slate Blue
-    },
-    {
-      'title': 'Arketipik Stil Mimarı',
-      'subtitle': 'Gardırobun boş olsa bile Master DNA verilerini (yaş, meslek, ruh hali) analiz ederek sana en karizmatik ve psikolojik açıdan güçlü stil önerilerini sunuyoruz.',
-      'icon': '🧥',
-      'color': const Color(0xFFCD5C5C), // Indian Red
-    },
-    {
-      'title': 'Stratejik İlişki Stratejisti',
-      'subtitle': 'Aldatılma, ghosting veya ilk buluşma gibi senaryolarda burç tabanlı ve psikolojik derinliği olan saha taktikleriyle sosyal bağlarını profesyonelce yönet.',
-      'icon': '💞',
-      'color': const Color(0xFFDB7093), // Pale Violet Red
-    },
-    {
-      'title': 'Gelecek Mimarı & Odaklanma',
-      'subtitle': 'Kariyer hedeflerine giden yolda dopamin seviyeni optimize et, nöro-mimari teknikleriyle odaklanmanı artır ve hayallerini somut birer projeye dönüştür.',
-      'icon': '🗺️',
-      'color': const Color(0xFF2F4F4F), // Dark Slate Gray
-    },
-  ];
-  
+
+  List<Map<String, dynamic>> get _announcements => [
+        {
+          'titleKey': 'ann1Title',
+          'subtitleKey': 'ann1Subtitle',
+          'icon': '💎',
+          'color': const Color(0xFF5DADE2),
+          'isSUM': true,
+        },
+        {
+          'titleKey': 'ann2Title',
+          'subtitleKey': 'ann2Subtitle',
+          'icon': '🧠',
+          'color': const Color(0xFF6B8E23),
+        },
+        {
+          'titleKey': 'ann3Title',
+          'subtitleKey': 'ann3Subtitle',
+          'icon': '🌌',
+          'color': const Color(0xFF483D8B),
+        },
+        {
+          'titleKey': 'ann4Title',
+          'subtitleKey': 'ann4Subtitle',
+          'icon': '🧥',
+          'color': const Color(0xFFCD5C5C),
+        },
+        {
+          'titleKey': 'ann5Title',
+          'subtitleKey': 'ann5Subtitle',
+          'icon': '💞',
+          'color': const Color(0xFFDB7093),
+        },
+        {
+          'titleKey': 'ann6Title',
+          'subtitleKey': 'ann6Subtitle',
+          'icon': '🗺️',
+          'color': const Color(0xFF2F4F4F),
+        },
+      ];
+
   // Local state for data
-  String _userName = 'Misafir';
+  String _userName = '';
   int _tokenBalance = 100;
 
-  // Admin: 5 tap on avatar opens password dialog
+  // Admin: 5 taps on avatar checks role
   int _adminTapCount = 0;
   Timer? _adminTapResetTimer;
 
@@ -119,16 +124,22 @@ class _HomeScreenState extends State<HomeScreen> {
         _nameController.text = _userName;
       });
     }
-    
+
     // Load tokens
     final balance = await TokenService.getBalance();
     setState(() => _tokenBalance = balance);
-    
+
     // Load saved mood
     final savedMood = await MoodService.getCurrentMood();
     if (savedMood != null) {
       setState(() => _selectedMoodId = savedMood);
     }
+  }
+
+  Future<void> _onTokenChipTap() async {
+    await TokenDialog.show(context);
+    if (!mounted) return;
+    await _loadUserData();
   }
 
   @override
@@ -140,20 +151,33 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  void _onAdminTap() {
+  Future<void> _onAdminTap() async {
     _adminTapResetTimer?.cancel();
     _adminTapCount++;
     if (_adminTapCount >= 5) {
       _adminTapCount = 0;
-      showDialog<bool>(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => const AdminLoginDialog(),
-      ).then((value) {
-        if (value == true && mounted) {
-          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminPanelScreen()));
+      if (AuthService.isAnonymous ||
+          (AuthService.userEmail ?? '').trim().isEmpty) {
+        final changed = await Navigator.of(context).push<bool>(
+          MaterialPageRoute(builder: (_) => const AuthScreen()),
+        );
+        if (changed == true) {
+          await _loadUserData();
         }
-      });
+        if (!mounted) return;
+      }
+
+      final isAdmin = await AdminRoleService.isCurrentUserAdmin();
+      if (!mounted) return;
+      if (isAdmin) {
+        Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const AdminPanelScreen()));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Admin için e-posta hesabı ve yetki gerekli.')),
+        );
+      }
       return;
     }
     _adminTapResetTimer = Timer(const Duration(seconds: 2), () {
@@ -178,12 +202,14 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_tokenBalance == 100) {
       _loadUserData();
     }
-    
+
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         backgroundColor: AppTheme.sandBeige,
-        body: _selectedNavIndex == 0 ? _buildHomeContent() : const CampfireForumScreen(),
+        body: _selectedNavIndex == 0
+            ? _buildHomeContent()
+            : const CampfireForumScreen(),
         bottomNavigationBar: _buildBottomNav(),
       ),
     );
@@ -207,8 +233,10 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildNavItem(0, Icons.home_rounded, 'Ana Sayfa'),
-              _buildNavItem(1, Icons.local_fire_department_rounded, 'Kamp Ateşi'),
+              _buildNavItem(
+                  0, Icons.home_rounded, AppTranslations.get('homePage')),
+              _buildNavItem(1, Icons.local_fire_department_rounded,
+                  AppTranslations.get('campfire')),
             ],
           ),
         ),
@@ -226,7 +254,9 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: isSelected
-              ? (isCampfire ? AppTheme.terracotta.withOpacity(0.15) : AppTheme.sageGreen.withOpacity(0.15))
+              ? (isCampfire
+                  ? AppTheme.terracotta.withOpacity(0.15)
+                  : AppTheme.sageGreen.withOpacity(0.15))
               : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
@@ -269,7 +299,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   _buildMoodSelector(),
                   const SizedBox(height: 20),
-                  _buildSectionTitle('Seninle buradayım'),
+                  _buildSectionTitle(AppTranslations.get('iAmHereWithYou')),
                   const SizedBox(height: 12),
                   // Dynamic Card Construction
                   ..._buildCategoryGrid(),
@@ -315,7 +345,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     child: Center(
                       child: Text(
-                        _userName.isNotEmpty ? _userName[0].toUpperCase() : 'M',
+                        _userName.isNotEmpty
+                            ? _userName[0].toUpperCase()
+                            : AppTranslations.get('guest')[0].toUpperCase(),
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w600,
@@ -331,7 +363,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Merhaba,',
+                        AppTranslations.get('hello'),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: AppTheme.mutedSage,
                             ),
@@ -344,7 +376,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                     height: 32,
                                     child: TextField(
                                       controller: _nameController,
-                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
                                             color: AppTheme.forestCharcoal,
                                             fontWeight: FontWeight.w600,
                                           ),
@@ -352,14 +387,21 @@ class _HomeScreenState extends State<HomeScreen> {
                                         filled: true,
                                         fillColor: AppTheme.warmCream,
                                         isDense: true,
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 8),
                                         border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: AppTheme.sageGreen),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          borderSide: BorderSide(
+                                              color: AppTheme.sageGreen),
                                         ),
                                         focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: AppTheme.sageGreen, width: 2),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          borderSide: BorderSide(
+                                              color: AppTheme.sageGreen,
+                                              width: 2),
                                         ),
                                       ),
                                       onSubmitted: (_) => _saveName(),
@@ -376,7 +418,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                       color: AppTheme.sageGreen,
                                       borderRadius: BorderRadius.circular(8),
                                     ),
-                                    child: const Icon(Icons.check_rounded, color: Colors.white, size: 18),
+                                    child: const Icon(Icons.check_rounded,
+                                        color: Colors.white, size: 18),
                                   ),
                                 ),
                                 const SizedBox(width: 4),
@@ -388,21 +431,30 @@ class _HomeScreenState extends State<HomeScreen> {
                                   child: Container(
                                     padding: const EdgeInsets.all(6),
                                     decoration: BoxDecoration(
-                                      color: AppTheme.mutedSage.withOpacity(0.3),
+                                      color:
+                                          AppTheme.mutedSage.withOpacity(0.3),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
-                                    child: Icon(Icons.close_rounded, color: AppTheme.forestCharcoal, size: 18),
+                                    child: Icon(Icons.close_rounded,
+                                        color: AppTheme.forestCharcoal,
+                                        size: 18),
                                   ),
                                 ),
                               ],
                             )
                           : GestureDetector(
-                              onTap: () => setState(() => _isEditingName = true),
+                              onTap: () =>
+                                  setState(() => _isEditingName = true),
                               child: Row(
                                 children: [
                                   Text(
-                                    _userName,
-                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    _userName.isNotEmpty
+                                        ? _userName
+                                        : AppTranslations.get('guest'),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
                                           color: AppTheme.forestCharcoal,
                                           fontWeight: FontWeight.w600,
                                         ),
@@ -422,10 +474,29 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          // Bildirim + Token
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              GestureDetector(
+                onTap: () => LanguagePicker.show(context),
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppTheme.sageGreen.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      LanguageProvider.languageFlags[
+                              context.watch<LanguageProvider>().languageCode] ??
+                          '🌐',
+                      style: const TextStyle(fontSize: 18),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
               IconButton(
                 onPressed: () async {
                   final changed = await Navigator.of(context).push<bool>(
@@ -435,57 +506,71 @@ class _HomeScreenState extends State<HomeScreen> {
                     await _loadUserData();
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Hesap guncellendi.')),
+                        SnackBar(
+                            content:
+                                Text(AppTranslations.get('accountUpdated'))),
                       );
                     }
                   }
                 },
                 icon: Icon(
-                  AuthService.isAnonymous ? Icons.person_add_alt_1_rounded : Icons.verified_user_rounded,
-                  color: AuthService.isAnonymous ? AppTheme.terracotta : AppTheme.sageGreen,
+                  AuthService.isAnonymous
+                      ? Icons.person_add_alt_1_rounded
+                      : Icons.verified_user_rounded,
+                  color: AuthService.isAnonymous
+                      ? AppTheme.terracotta
+                      : AppTheme.sageGreen,
                 ),
-                tooltip: AuthService.isAnonymous ? 'Hesap bagla' : 'Hesap yonetimi',
+                tooltip: AuthService.isAnonymous
+                    ? AppTranslations.get('linkAccount')
+                    : AppTranslations.get('accountManagement'),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
               ),
               IconButton(
-                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsScreen())),
-                icon: Icon(Icons.notifications_outlined, color: AppTheme.forestCharcoal),
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const NotificationsScreen())),
+                icon: Icon(Icons.notifications_outlined,
+                    color: AppTheme.forestCharcoal),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
               ),
               const SizedBox(width: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppTheme.warmCream,
-                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                  border: Border.all(color: AppTheme.softBorder),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: AppTheme.terracotta.withOpacity(0.15),
-                        shape: BoxShape.circle,
+              GestureDetector(
+                onTap: _onTokenChipTap,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.warmCream,
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                    border: Border.all(color: AppTheme.softBorder),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: AppTheme.terracotta.withOpacity(0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Center(
+                          child: Text('✨', style: TextStyle(fontSize: 12)),
+                        ),
                       ),
-                      child: const Center(
-                        child: Text('✨', style: TextStyle(fontSize: 12)),
+                      const SizedBox(width: 8),
+                      Text(
+                        '$_tokenBalance',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                          color: AppTheme.forestCharcoal,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '$_tokenBalance',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                        color: AppTheme.forestCharcoal,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -497,10 +582,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildMoodSelector() {
     // Get current mood info for display
-    final currentMoodInfo = _selectedMoodId != null 
+    final currentMoodInfo = _selectedMoodId != null
         ? MoodService.getMoodInfo(_selectedMoodId!)
         : null;
-    
+
     if (!_isMoodBarExpanded) {
       return GestureDetector(
         onTap: () => setState(() => _isMoodBarExpanded = true),
@@ -523,9 +608,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      currentMoodInfo == null 
-                          ? 'Bugün nasıl hissediyorsun?'
-                          : 'Bugünkü ruh halin',
+                      currentMoodInfo == null
+                          ? AppTranslations.get('howAreYouFeeling')
+                          : AppTranslations.get('todaysMood'),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppTheme.mutedSage,
                           ),
@@ -550,7 +635,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
     }
-    
+
     // Expanded mood selector with 8 moods in grid
     return Container(
       padding: const EdgeInsets.all(20),
@@ -566,7 +651,7 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Bugün nasıl hissediyorsun?',
+                AppTranslations.get('howAreYouFeeling'),
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -579,7 +664,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: AppTheme.mutedSage.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.close_rounded, color: AppTheme.mutedSage, size: 18),
+                  child: Icon(Icons.close_rounded,
+                      color: AppTheme.mutedSage, size: 18),
                 ),
               ),
             ],
@@ -608,7 +694,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildMoodItem(Map<String, String> mood) {
     final isSelected = _selectedMoodId == mood['id'];
     final moodColor = Color(int.parse(mood['color']!));
-    
+
     return GestureDetector(
       onTap: () async {
         setState(() {
@@ -625,7 +711,7 @@ class _HomeScreenState extends State<HomeScreen> {
         decoration: BoxDecoration(
           color: isSelected ? moodColor.withOpacity(0.15) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
-          border: isSelected 
+          border: isSelected
               ? Border.all(color: moodColor, width: 2)
               : Border.all(color: Colors.transparent, width: 2),
         ),
@@ -652,21 +738,21 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Widget> _buildCategoryGrid() {
     List<Widget> gridItems = [];
     final categories = AppConstants.aiCategories;
-    
+
     // First row
     gridItems.add(_buildCardRow(0, 1));
     gridItems.add(const SizedBox(height: 16));
-    
+
     // Daily Insight (Always after first row for importance)
     gridItems.add(_buildDailyInsight());
     gridItems.add(const SizedBox(height: 16));
-    
+
     // Subsequent rows
     for (int i = 2; i < categories.length; i += 2) {
       gridItems.add(_buildCardRow(i, i + 1));
       gridItems.add(const SizedBox(height: 12));
     }
-    
+
     return gridItems;
   }
 
@@ -690,7 +776,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final name = AppConstants.categoryNames[category] ?? category;
     final icon = AppConstants.categoryIcons[category] ?? '🌿';
 
-    // Astroloji ve Rüya için özel kart
+    // Astroloji kartı
     if (category == 'anksiyete') {
       return GestureDetector(
         onTap: () => _openChat(context, category),
@@ -715,7 +801,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     width: 70,
                     height: 70,
                     color: AppTheme.sageGreen.withOpacity(0.1),
-                    child: Center(child: Text(icon, style: const TextStyle(fontSize: 30))),
+                    child: Center(
+                        child:
+                            Text(icon, style: const TextStyle(fontSize: 30))),
                   ),
                 ),
               ),
@@ -737,7 +825,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Row(
                       children: [
                         Text(
-                          'Başla',
+                          AppTranslations.get('start'),
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
@@ -745,7 +833,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const SizedBox(width: 4),
-                        Icon(Icons.arrow_forward_rounded, size: 12, color: AppTheme.terracotta),
+                        Icon(Icons.arrow_forward_rounded,
+                            size: 12, color: AppTheme.terracotta),
                       ],
                     ),
                   ],
@@ -757,7 +846,80 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // Stil Danışmanlığı için özel kart
+    // Rüya kartı
+    if (category == 'ruya_tabiri') {
+      return GestureDetector(
+        onTap: () => _openChat(context, category),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 110),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppTheme.warmCream,
+            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            boxShadow: AppTheme.cardShadow,
+          ),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.asset(
+                  'assets/images/dream_cover.png',
+                  width: 70,
+                  height: 70,
+                  fit: BoxFit.cover,
+                  alignment: Alignment.center,
+                  filterQuality: FilterQuality.high,
+                  color: const Color(0x339C27B0),
+                  colorBlendMode: BlendMode.overlay,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: 70,
+                    height: 70,
+                    color: AppTheme.deepSage.withOpacity(0.1),
+                    child: Center(
+                        child:
+                            Text(icon, style: const TextStyle(fontSize: 30))),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      name,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Text(
+                          AppTranslations.get('start'),
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.terracotta,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(Icons.arrow_forward_rounded,
+                            size: 12, color: AppTheme.terracotta),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     if (category == 'stil_danismanligi') {
       return GestureDetector(
         onTap: () => _openChat(context, category),
@@ -782,7 +944,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     width: 70,
                     height: 70,
                     color: AppTheme.terracotta.withOpacity(0.1),
-                    child: Center(child: Text(icon, style: const TextStyle(fontSize: 30))),
+                    child: Center(
+                        child:
+                            Text(icon, style: const TextStyle(fontSize: 30))),
                   ),
                 ),
               ),
@@ -805,7 +969,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Row(
                       children: [
                         Text(
-                          'Başla',
+                          AppTranslations.get('start'),
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
@@ -813,7 +977,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const SizedBox(width: 4),
-                        Icon(Icons.arrow_forward_rounded, size: 14, color: AppTheme.terracotta),
+                        Icon(Icons.arrow_forward_rounded,
+                            size: 14, color: AppTheme.terracotta),
                       ],
                     ),
                   ],
@@ -850,7 +1015,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     width: 70,
                     height: 70,
                     color: AppTheme.sageGreen.withOpacity(0.1),
-                    child: Center(child: Text(icon, style: const TextStyle(fontSize: 30))),
+                    child: Center(
+                        child:
+                            Text(icon, style: const TextStyle(fontSize: 30))),
                   ),
                 ),
               ),
@@ -872,7 +1039,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Row(
                       children: [
                         Text(
-                          'Başla',
+                          AppTranslations.get('start'),
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -880,7 +1047,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const SizedBox(width: 4),
-                        Icon(Icons.arrow_forward_rounded, size: 14, color: AppTheme.terracotta),
+                        Icon(Icons.arrow_forward_rounded,
+                            size: 14, color: AppTheme.terracotta),
                       ],
                     ),
                   ],
@@ -897,7 +1065,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return GestureDetector(
         onTap: () => _openChat(context, category),
         child: Container(
-          constraints: const BoxConstraints(minHeight: 110), 
+          constraints: const BoxConstraints(minHeight: 110),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
             color: AppTheme.warmCream,
@@ -917,7 +1085,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     width: 70,
                     height: 70,
                     color: AppTheme.sageGreen.withOpacity(0.1),
-                    child: Center(child: Text(icon, style: const TextStyle(fontSize: 30))),
+                    child: Center(
+                        child:
+                            Text(icon, style: const TextStyle(fontSize: 30))),
                   ),
                 ),
               ),
@@ -940,7 +1110,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Row(
                       children: [
                         Text(
-                          'Başla',
+                          AppTranslations.get('start'),
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -948,7 +1118,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const SizedBox(width: 4),
-                        Icon(Icons.arrow_forward_rounded, size: 14, color: AppTheme.terracotta),
+                        Icon(Icons.arrow_forward_rounded,
+                            size: 14, color: AppTheme.terracotta),
                       ],
                     ),
                   ],
@@ -981,7 +1152,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: AppTheme.sageGreen.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Center(child: Text(icon, style: const TextStyle(fontSize: 34))),
+                child: Center(
+                    child: Text(icon, style: const TextStyle(fontSize: 34))),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -1001,7 +1173,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Row(
                       children: [
                         Text(
-                          'Başla',
+                          AppTranslations.get('start'),
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -1009,7 +1181,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const SizedBox(width: 4),
-                        Icon(Icons.arrow_forward_rounded, size: 14, color: AppTheme.terracotta),
+                        Icon(Icons.arrow_forward_rounded,
+                            size: 14, color: AppTheme.terracotta),
                       ],
                     ),
                   ],
@@ -1042,7 +1215,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: AppTheme.terracotta.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Center(child: Text(icon, style: const TextStyle(fontSize: 34))),
+                child: Center(
+                    child: Text(icon, style: const TextStyle(fontSize: 34))),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -1063,7 +1237,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Row(
                       children: [
                         Text(
-                          'Başla',
+                          AppTranslations.get('start'),
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -1071,7 +1245,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const SizedBox(width: 4),
-                        Icon(Icons.arrow_forward_rounded, size: 14, color: AppTheme.terracotta),
+                        Icon(Icons.arrow_forward_rounded,
+                            size: 14, color: AppTheme.terracotta),
                       ],
                     ),
                   ],
@@ -1100,9 +1275,7 @@ class _HomeScreenState extends State<HomeScreen> {
               width: 70,
               height: 70,
               decoration: BoxDecoration(
-                color: category == 'motivasyon' 
-                    ? AppTheme.terracotta.withOpacity(0.1)
-                    : AppTheme.sageGreen.withOpacity(0.1),
+                color: AppTheme.sageGreen.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Center(
@@ -1127,7 +1300,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Row(
                     children: [
                       Text(
-                        'Başla',
+                        AppTranslations.get('start'),
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -1135,7 +1308,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       const SizedBox(width: 4),
-                      Icon(Icons.arrow_forward_rounded, size: 14, color: AppTheme.terracotta),
+                      Icon(Icons.arrow_forward_rounded,
+                          size: 14, color: AppTheme.terracotta),
                     ],
                   ),
                 ],
@@ -1198,7 +1372,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(width: 12),
               Text(
-                'Duyuru & Rehberlik',
+                AppTranslations.get('announcementGuidance'),
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
@@ -1208,80 +1382,18 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          if (data['title'] == 'Sessiz Uyumun Matematiği')
-            RichText(
-              text: TextSpan(
-                style: const TextStyle(
-                  fontFamily: 'Outfit', // Or default app font
-                  fontSize: 20,
-                  color: Colors.white70,
-                  fontWeight: FontWeight.w500,
-                ),
-                children: [
-                  TextSpan(
-                    text: 'S',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 24,
-                      shadows: [
-                        BoxShadow(
-                          color: Colors.white.withOpacity(0.8),
-                          blurRadius: 12,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const TextSpan(text: 'essiz '),
-                  TextSpan(
-                    text: 'U',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 24,
-                      shadows: [
-                        BoxShadow(
-                          color: Colors.white.withOpacity(0.8),
-                          blurRadius: 12,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const TextSpan(text: 'yumun '),
-                  TextSpan(
-                    text: 'M',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 24,
-                      shadows: [
-                        BoxShadow(
-                          color: Colors.white.withOpacity(0.8),
-                          blurRadius: 12,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const TextSpan(text: 'atematiği'),
-                ],
-              ),
-            )
-          else
-            Text(
-              data['title'],
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+          Text(
+            AppTranslations.get(data['titleKey']),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
+          ),
           const SizedBox(height: 8),
           Flexible(
             child: Text(
-              data['subtitle'],
+              AppTranslations.get(data['subtitleKey']),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Colors.white.withOpacity(0.9),
                     fontSize: 13,
@@ -1297,16 +1409,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _getMotivationalTag() {
     final weekday = DateTime.now().weekday;
-    const tags = {
-      1: 'Yeni hafta, yeni başlangıç',
-      2: 'Devam et',
-      3: 'Yarı yoldayız',
-      4: 'Neredeyse orada',
-      5: 'Hafta sonu yaklaşıyor',
-      6: 'Kendine zaman ayır',
-      7: 'Dinlen ve yenilen',
+    final tags = {
+      1: AppTranslations.get('motivMon'),
+      2: AppTranslations.get('motivTue'),
+      3: AppTranslations.get('motivWed'),
+      4: AppTranslations.get('motivThu'),
+      5: AppTranslations.get('motivFri'),
+      6: AppTranslations.get('motivSat'),
+      7: AppTranslations.get('motivSun'),
     };
-    return tags[weekday] ?? 'Büyüme zamanı';
+    return tags[weekday] ?? AppTranslations.get('growthTime');
   }
 
   void _openChat(BuildContext context, String category) {
@@ -1317,11 +1429,12 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     } else if (category == 'anksiyete') {
       Navigator.of(context).push(
-        MaterialPageRoute(builder: (context) => const AstrologyDreamRoomScreen()),
+        MaterialPageRoute(
+            builder: (context) => const AstrologyDreamRoomScreen()),
       );
-    } else if (category == 'motivasyon') {
+    } else if (category == 'ruya_tabiri') {
       Navigator.of(context).push(
-        MaterialPageRoute(builder: (context) => const MotivationRoomScreen()),
+        MaterialPageRoute(builder: (context) => const DreamRoomScreen()),
       );
     } else if (category == 'stil_danismanligi') {
       Navigator.of(context).push(
@@ -1346,5 +1459,4 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
   }
-
 }

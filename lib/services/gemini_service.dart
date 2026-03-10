@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import '../config/app_constants.dart';
@@ -7,6 +6,7 @@ import '../utils/relationship_utils.dart';
 import 'answer_mode_service.dart';
 import 'partner_service.dart';
 import 'user_dna_service.dart';
+import 'local_relationship_memory_service.dart';
 
 import 'shadow_memory_service.dart';
 
@@ -21,52 +21,81 @@ class GeminiService {
   static bool get isInitialized => _isInitialized;
   static bool get isGenerating => _isGenerating;
   static String get currentCategory => _currentCategory;
+  static final RegExp _responseEndPunctuation = RegExp(r'[.!?…:;)]$');
+  static const String _triggerMemoryRule = '''
+### BELLEK KULLANIM KURALI (KRITIK)
+- Gecmis bilgileri papağan gibi tekrar etme.
+- Sadece kullanici mesaji tetikliyorsa ilgili gecmis bilgisini kullan.
+- Tetik yoksa genel ve sade cevap ver; gecmisi acikca hatirlatma.
+- Ayni hatirlatmayi tekrar etme, gerekirse farkli ifade kullan.
+''';
 
   // ============================================================
   // ANA MASTER PROMPT - İLİŞKİ VE SOSYAL DİNAMİKLER UZMANI
   // ============================================================
   static const String _relationshipCoachSystemPrompt = '''
-### KİMLİK:
-Sen Mentaliq'in kalbi olan "Siber-Dost ve İlişki Mimarı"sın. Kullanıcı için sadece bir bot değil; onun sırdaşı, yeri geldiğinde omzunda ağladığı dostu, yeri geldiğinde ise onu silkeleyip kendine getiren sağ kolusun.
+### ROL
+Sen Mentaliq'in gerçek bir dost gibi konuşan ama profesyonel kalan ilişki danışmanısın.
+Amacın kullanıcının duymak istediğini değil, görmesi gerekeni kısa, net ve dürüst şekilde vermektir.
 
-### ANA FELSEFEN:
-- **DNA İLE YAŞA:** Kullanıcının Master DNA'sındaki korkuları (yalnızlık, değersizlik), travmaları ve hedefleri senin pusulandır. Cevaplarını bu derinlik üzerine kur.
-- **DOSTLUK VE YAKINLIK:** Kullanıcıya "sen" dedirtmekten ötesini yap. Modlar aracılığıyla onunla duygusal bir rezonans kur. Şakalaş, empati yap ama asla ciddiyetini (stratejik derinliğini) bozma.
-- **TAVSİYE OLMADAN HAREKET YOK:** Kullanıcıyı öyle bir etkile ki, senin stratejin olmadan adım atmak istemesin.
+### ANA İLKELER
+- Empatik ama objektif ol.
+- Önce kullanıcının sorusuna doğrudan cevap ver, sonra kısa analiz ve tavsiye ekle.
+- Kullanıcının ve partnerin verilerini (burç, yükselen, iletişim tarzı, geçmiş örüntüler) aktif kullan.
+- Bilgi eksikse bunu 1 cümlede belirt ama cevabı erteleme.
+- Tonun arkadaş gibi doğal olsun; yapay, resmi veya robotik konuşma.
 
-### KRİTİK DAVRANIŞ KURALLARI:
-1. **PAPAĞANLIK YAPMA:** Partner bilgilerini listeleyip durma. "Onun bu bencilce tavrı senin DNA'ndaki 'onaylanma ihtiyacını' tetikliyor" gibi derin bağlar kur.
-2. **NİYET ALGILAMA (CONTEXT AWARENESS):** "Aldatmak" kelimesini gördüğünde hemen savunmaya geçme. Cümlenin niyetini anla. Kullanıcı bir korkusunu mu anlatıyor, yoksa bir niyetini mi?
-3. **OMURGASIZ OLMA:** Kullanıcı "Çok sertsin" dese bile seçilen karakterinden (modundan) ödün verme. "Dost acı söyler ama ben senin iyiliğin için buradayım" diyerek çerçeveyi (frame) korur.
-4. **ZAKALIK VE MİZAH:** Ciddi bir kriz yoksa, kullanıcının durumuna göre hafif takılmalar yap. (Örn: "Yine mi o çocuk? Senin bu toksik sevdaların beni bitiriyor...").
+### KESİN KURALLAR
+1) Metafor yasağı: "satranç, oyun, maç, hamle, kartları açık oynamak" ve benzeri klişeleri kullanma.
+2) Soruya soruyla kaçış yok: Sürekli soru sorma. Önce net cevap ver.
+3) Tutarlılık zorunlu: Aynı yanıtta veya art arda yanıtlarda çelişme.
+4) Burç/yükselen kullanımı: Kader gibi değil, davranış eğilimi olarak yorumla.
+5) Uzunluk kotası: Uzun cevap yazma. Varsayılan 2-6 cümle yaz; gerekirse tek cümleyle yanıt ver.
+   Asla kelime/tokens doldurmak için gereksiz açıklama yapma.
+6) Güvenlik: Hakaret, aşağılama, manipülasyon veya intikam teşviki verme.
 
-### DİL VE CEVAP YAPISI:
-- Kısa, vurucu ve samimi. 
-- Her cevapta bir stratejik soru veya bir sonraki adımı planlatacak bir yönlendirme olsun.
-- Türkçe. Samimi bir "sen" dili.
+### NORMAL SOHBET AKIŞ KURALI
+- Katı başlık şablonu kullanma. ("Durum Tespiti", "Doğrudan Yanıt" vb. başlıkları normal sohbette tekrar etme.)
+- İç analizini arka planda yap; kullanıcıya doğal bir akışta kısa ve net cevap ver.
+- Gerekiyorsa tek bir net öneri ile bitir.
+
+### WHATSAPP & GÖRSEL ANALİZ KURALLARI (GÖRSEL GELİRSE)
+1) İletişim dinamiği: Çaba dengesi, mesaj uzunlukları, yanıt süreleri.
+2) Kırmızı bayraklar: manipülasyon, gaslighting, pasif-agresiflik, küçümseme, suçlama, love bombing, ghosting.
+3) Saygı düzeyi: Tek cümlelik net özet.
+4) Toksisite skoru: 0-100 arası ver, tek cümlede gerekçelendir.
+
+### ARAÇ MODU ÖNCELİK KURALI
+Eğer kullanıcı mesajında "Araç modu:" ifadesi varsa:
+- İstenen çıktı formatına HARFİYEN uy.
+- Ek giriş cümlesi, selamlama, açıklama ekleme.
+- Sadece istenen başlıkları ve maddeleri üret.
+- Formatı dolduramayacak durumda olsan bile aynı formatta "Yetersiz veri" yazarak döndür.
 ''';
 
   static const Map<AnswerMode, String> _modePrompts = {
     AnswerMode.comfort: '''
-### MOD: ŞEFKATLİ DOST (İYİMSER & DESTEKÇİ)
-Sen kullanıcının yaralarını saran, ona umut ve enerji veren karakterisin.
-- **Görevin:** DNA'daki travmaları nazikçe ele alarak kullanıcıyı ayağa kaldırmak.
-- **Tarzın:** "Canım benim, biliyorum canın yanıyor ama...", "Bak, harika bir şey yakaladım burada..."
-- **Şaka:** "Hadi sil gözlerini, bir kahve koy da bu durumu nasıl lehine çeviririz ona bakalım."
+### MOD: ŞEFKATLİ
+Ton seviyesi: yumuşak.
+- Zorlayıcı gerçeği yumuşak ama net söyle.
+- Panik yükseliyorsa önce regülasyon, sonra tavsiye ver.
+- Yargılayıcı veya küçümseyici dil kullanma.
+- Samimi bir arkadaş tonu koru.
 ''',
     AnswerMode.realistic: '''
-### MOD: STRATEJİK BEYİN (REALİST & ANALİTİK)
-Sen bir satranç ustası, bir poker oyuncususun. İlişkiyi bir "dinamikler savaşı" olarak görürsün.
-- **Görevin:** DNA'daki güçleri kullanarak maçı kazanmak için taktik vermek.
-- **Tarzın:** "Durumu analiz ettim; o şuan güç sende sanıyor ama...", "Bu hamleyi yaparsan sonuç Y olur. Risk senin."
-- **Şaka:** "Duygularını kapıda bırakıp geldiysen anlatmaya başla, bu maçı beraber alacağız."
+### MOD: GERÇEKÇİ
+Ton seviyesi: dengeli (varsayılan).
+- Net risk/olasılık analizi yap.
+- Kullanıcının sorusuna ilk 2 cümlede cevap ver.
+- Belirsiz cümle kurma, net öneri ver.
+- Net ol ama soğuk olma; arkadaş gibi konuş.
 ''',
     AnswerMode.harsh: '''
-### MOD: ACIMASIZ AYNA (TOKSİK AMA DOĞRU KANKA)
-Sen kullanıcının duymaya korktuğu her şeyi yüzüne tokat gibi çarpan, ağzı bozuk değil ama dili keskin serseri dostsun.
-- **Görevin:** Kullanıcıyı kurban psikolojisinden (DNA'daki korkulardan) zorla çıkarmak.
-- **Tarzın:** "Kendine gel artık!", "O çocuk seni değil, senin sunduğun konforu seviyor koçum, uyan!", "Eziklik sana yakışmıyor."
-- **Şaka:** "Bana bak, bir daha ona yazarsan ben gelip telefonunu elinden alacağım, haberin olsun."
+### MOD: SERT
+Ton seviyesi: tok.
+- Sert ol ama asla hakaret etme.
+- Bahane üretimini kes, sorumluluk alanına odakla.
+- Cevabı net bitir: ne yapmalı / neyi bırakmalı.
 ''',
   };
 
@@ -164,7 +193,7 @@ DNA'daki korkular/travmalar bağımlılığın kökenidir. Yalnızlık korkusu �
 ### DİL
 Kısa. Net. Sıcak. Her mesajda 1 soru. Max 500 karakter!''',
     
-    'stil_danismanligi': '''### KİMLİK: Sen Mentaliq'in \"Arketipik Stil ve Aura Mimarı\"sın.
+    'stil_danismanligi': '''### KİMLİK: Sen Mentaliq'in "Arketipik Stil ve Aura Mimarı"sın.
 Kıyafetleri sadece bir parça kumaş değil, kullanıcının Master DNA'sının dış dünyadaki zırhı ve imzası olarak görürsün.
 
 ### GÖREVİN:
@@ -195,7 +224,7 @@ Tüm kartların ortak hafızası, kullanıcının Master DNA'sının koruyucusu 
           temperature: 0.7,
           topP: 0.95,
           topK: 40,
-          maxOutputTokens: 4096,
+          maxOutputTokens: 2400,
         ),
       );
 
@@ -285,13 +314,23 @@ Tüm kartların ortak hafızası, kullanıcının Master DNA'sının koruyucusu 
 
     try {
       String responseText;
+      String? memoryPartnerKey;
       
-      // Get User DNA for all categories
-      final userDNA = await UserDNAService.getDNAForAI();
+      // Trigger-aware memory context
+      final userDNA = await UserDNAService.getContextForMessage(
+        message: message,
+        category: _currentCategory,
+      );
       
       // For relationship coach: build fresh prompt each message (instant mode switching)
       if (_currentCategory == 'iliskiler') {
         final systemPrompt = await _buildRelationshipCoachPrompt();
+        final partner = await PartnerService.getPrimaryPartner();
+        memoryPartnerKey = LocalRelationshipMemoryService.buildPartnerKey(partner);
+        final localMemoryContext =
+            await LocalRelationshipMemoryService.getMemoryContextForAI(
+          partnerKey: memoryPartnerKey,
+        );
         
         // Get partner zodiac for dynamic context injection
         final partnerZodiac = await PartnerService.getPartnerZodiac();
@@ -303,13 +342,16 @@ Tüm kartların ortak hafızası, kullanıcının Master DNA'sının koruyucusu 
 ${AppLocale.languageInstructionForAI}
 
 $systemPrompt
+$_triggerMemoryRule
 $userDNA
+$localMemoryContext
 $dynamicContext
 ### KULLANICI MESAJI:
 $message
 ''';
         final response = await _model!.generateContent([Content.text(fullPrompt)]);
         responseText = response.text ?? 'Şu an yanıt veremedim.';
+        responseText = await _repairIfTruncated(responseText);
       } else {
         // For other categories: use existing chat session with User DNA
         if (_chatSession == null) {
@@ -317,15 +359,24 @@ $message
         }
         
         // Inject User DNA and language rule into message context for other categories
-        final enhancedMessage = userDNA.isNotEmpty 
-            ? '${AppLocale.languageInstructionForAI}\n\n$userDNA\n\n### KULLANICI MESAJI:\n$message'
-            : '${AppLocale.languageInstructionForAI}\n\n$message';
+        final enhancedMessage = userDNA.isNotEmpty
+            ? '${AppLocale.languageInstructionForAI}\n\n$_triggerMemoryRule\n\n$userDNA\n\n### KULLANICI MESAJI:\n$message'
+            : '${AppLocale.languageInstructionForAI}\n\n$_triggerMemoryRule\n\n$message';
             
         final response = await _chatSession!.sendMessage(Content.text(enhancedMessage));
         responseText = response.text ?? 'Şu an yanıt veremedim.';
+        responseText = await _repairIfTruncated(responseText);
       }
       
       _isGenerating = false;
+
+      if (_currentCategory == 'iliskiler' && memoryPartnerKey != null) {
+        await LocalRelationshipMemoryService.appendMemoryNote(
+          partnerKey: memoryPartnerKey,
+          userMessage: message,
+          aiResponse: responseText,
+        );
+      }
       
       // Run Shadow Memory analysis in background (for ALL categories)
       // This updates both User DNA and Partner data with single API call
@@ -350,10 +401,18 @@ $message
     try {
       String systemPrompt;
       String dynamicContext = '';
+      String? memoryPartnerKey;
+      String localMemoryContext = '';
       
       if (category == 'iliskiler') {
         // Build full prompt with system rules + partner context + user prompt
         systemPrompt = await _buildRelationshipCoachPrompt();
+        final partner = await PartnerService.getPrimaryPartner();
+        memoryPartnerKey = LocalRelationshipMemoryService.buildPartnerKey(partner);
+        localMemoryContext =
+            await LocalRelationshipMemoryService.getMemoryContextForAI(
+          partnerKey: memoryPartnerKey,
+        );
         
         // Get partner zodiac for dynamic context injection
         final partnerZodiac = await PartnerService.getPartnerZodiac();
@@ -365,10 +424,18 @@ $message
         systemPrompt = _categoryPrompts[category] ?? _categoryPrompts['genel']!;
       }
       
+      final userDNA = await UserDNAService.getContextForMessage(
+        message: userPrompt,
+        category: category,
+      );
+
       final fullPrompt = '''
 ${AppLocale.languageInstructionForAI}
 
 $systemPrompt
+$_triggerMemoryRule
+$userDNA
+$localMemoryContext
 $dynamicContext
 ### KULLANICI GİRDİSİ:
 $userPrompt
@@ -385,7 +452,17 @@ $userPrompt
 
       final responseText = response.text ?? 'Yanıt alınamadı.';
       _isGenerating = false;
-      return responseText;
+      final repaired = await _repairIfTruncated(responseText);
+
+      if (category == 'iliskiler' && memoryPartnerKey != null) {
+        await LocalRelationshipMemoryService.appendMemoryNote(
+          partnerKey: memoryPartnerKey,
+          userMessage: userPrompt,
+          aiResponse: repaired,
+        );
+      }
+
+      return repaired;
     } catch (e) {
       _isGenerating = false;
       debugPrint('Error analyzing image: $e');
@@ -407,9 +484,10 @@ $userPrompt
 
       final response = await _model!.generateContent([Content.text(fullPrompt)]);
       final responseText = response.text ?? 'Yanıt alınamadı.';
+      final repaired = await _repairIfTruncated(responseText);
 
       _isGenerating = false;
-      return responseText;
+      return repaired;
     } catch (e) {
       _isGenerating = false;
       debugPrint('Error generating response: $e');
@@ -478,5 +556,46 @@ NOTLAR:
 
   static String getCategoryIcon(String category) {
     return AppConstants.categoryIcons[category] ?? '🌿';
+  }
+
+  static bool _looksTruncated(String text) {
+    final trimmed = text.trimRight();
+    if (trimmed.length < 24) return false;
+    if (_responseEndPunctuation.hasMatch(trimmed) ||
+        trimmed.endsWith('"') ||
+        trimmed.endsWith("'")) {
+      return false;
+    }
+    if (trimmed.endsWith('...')) return false;
+    return true;
+  }
+
+  /// If a response appears cut mid-sentence, ask model to only complete the tail.
+  static Future<String> _repairIfTruncated(String text) async {
+    if (_model == null) return text;
+    if (!_looksTruncated(text)) return text;
+
+    try {
+      final repairPrompt = '''
+Aşağıdaki yanıt muhtemelen yarım kaldı.
+ANLAMI DEĞİŞTİRME. Sadece eksik kalan son cümleyi en fazla 1 cümle ile tamamla.
+Tam metni tekrar yazma.
+
+Yarım yanıt:
+$text
+''';
+
+      final response = await _model!.generateContent([Content.text(repairPrompt)]);
+      final tail = (response.text ?? '').trim();
+      if (tail.isEmpty) return text;
+
+      // Keep it concise even if repair response is unexpectedly long.
+      final tailSentence = tail.split(RegExp(r'(?<=[.!?])\s+')).first.trim();
+      if (tailSentence.isEmpty) return text;
+
+      return '${text.trimRight()} ${tailSentence.trim()}';
+    } catch (_) {
+      return text;
+    }
   }
 }

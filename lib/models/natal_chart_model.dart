@@ -22,18 +22,22 @@ class NatalChartModel {
     // Parse houses
     final housesMap = <String, HouseCusp>{};
     if (json['houses'] != null) {
-      final rawHouses = json['houses'] as Map<String, dynamic>;
+      final rawHouses = (json['houses'] as Map).cast<dynamic, dynamic>();
       rawHouses.forEach((key, value) {
-        housesMap[key] = HouseCusp.fromJson(value as Map<String, dynamic>);
+        if (value is Map) {
+          housesMap['$key'] = HouseCusp.fromJson(value.cast<String, dynamic>());
+        }
       });
     }
 
     // Parse planets
     final planetsMap = <String, PlanetPosition>{};
     if (json['planets'] != null) {
-      final rawPlanets = json['planets'] as Map<String, dynamic>;
+      final rawPlanets = (json['planets'] as Map).cast<dynamic, dynamic>();
       rawPlanets.forEach((key, value) {
-        planetsMap[key] = PlanetPosition.fromJson(value as Map<String, dynamic>);
+        if (value is Map) {
+          planetsMap['$key'] = PlanetPosition.fromJson(value.cast<String, dynamic>());
+        }
       });
     }
 
@@ -123,8 +127,15 @@ class HouseCusp {
   factory HouseCusp.fromJson(Map<String, dynamic> json) {
     return HouseCusp(
       sign: json['sign'] ?? '',
-      degree: json['degree'] ?? 0,
+      degree: _toInt(json['degree']),
     );
+  }
+
+  static int _toInt(dynamic v) {
+    if (v is int) return v;
+    if (v is double) return v.round();
+    if (v is String) return int.tryParse(v) ?? 0;
+    return 0;
   }
 
   Map<String, dynamic> toJson() {
@@ -149,9 +160,16 @@ class PlanetPosition {
   factory PlanetPosition.fromJson(Map<String, dynamic> json) {
     return PlanetPosition(
       sign: json['sign'] ?? '',
-      house: json['house'] ?? 0,
-      degree: json['degree'] ?? 0,
+      house: _toInt(json['house']),
+      degree: _toInt(json['degree']),
     );
+  }
+
+  static int _toInt(dynamic v) {
+    if (v is int) return v;
+    if (v is double) return v.round();
+    if (v is String) return int.tryParse(v) ?? 0;
+    return 0;
   }
 
   Map<String, dynamic> toJson() {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../config/app_theme.dart';
+import '../../l10n/app_translations.dart';
 import '../../services/forum_service.dart';
 
 const int _kMaxPostLength = 150;
@@ -54,9 +55,9 @@ class _CampfireShareTabState extends State<CampfireShareTab> {
 
   String _getTypeDescription(String type) {
     switch (type) {
-      case 'confession': return 'İçini dök, anonim paylaşabilirsin';
-      case 'photo_story': return 'Fotoğrafla hikayeni anlat';
-      case 'idea_question': return 'Fikir sor, görüş al';
+      case 'confession': return AppTranslations.get('confessionDesc');
+      case 'photo_story': return AppTranslations.get('photoStoryDesc');
+      case 'idea_question': return AppTranslations.get('ideaQuestionDesc');
       default: return '';
     }
   }
@@ -70,7 +71,7 @@ class _CampfireShareTabState extends State<CampfireShareTab> {
   Future<void> _submit() async {
     final text = _textController.text.trim();
     if (text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Metin girin')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppTranslations.get('enterText'))));
       return;
     }
     setState(() => _sending = true);
@@ -86,7 +87,7 @@ class _CampfireShareTabState extends State<CampfireShareTab> {
       if (mounted) {
         _textController.clear();
         setState(() => _pickedImage = null);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Paylaşıldı')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppTranslations.get('shared'))));
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Hata: $e')));
@@ -102,16 +103,16 @@ class _CampfireShareTabState extends State<CampfireShareTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Paylaşım türü', style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppTheme.forestCharcoal)),
+          Text(AppTranslations.get('postType'), style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppTheme.forestCharcoal)),
           const SizedBox(height: 8),
           // Tür seçimi - 3 buton
           Row(
             children: [
-              _buildTypeButton('confession', '🤫', 'İtiraf'),
+              _buildTypeButton('confession', '🤫', AppTranslations.get('confessionType')),
               const SizedBox(width: 8),
-              _buildTypeButton('photo_story', '📸', 'Foto+Metin'),
+              _buildTypeButton('photo_story', '📸', AppTranslations.get('photoStoryType')),
               const SizedBox(width: 8),
-              _buildTypeButton('idea_question', '💡', 'Fikir sor'),
+              _buildTypeButton('idea_question', '💡', AppTranslations.get('ideaQuestionType')),
             ],
           ),
           const SizedBox(height: 12),
@@ -148,7 +149,7 @@ class _CampfireShareTabState extends State<CampfireShareTab> {
                   onChanged: (v) => setState(() => _isAnonymous = v ?? false),
                   activeColor: AppTheme.terracotta,
                 ),
-                const Text('Anonim paylaş'),
+                Text(AppTranslations.get('anonymousShare')),
               ],
             ),
           ],
@@ -161,7 +162,7 @@ class _CampfireShareTabState extends State<CampfireShareTab> {
             maxLength: _kMaxPostLength,
             inputFormatters: [LengthLimitingTextInputFormatter(_kMaxPostLength)],
             decoration: InputDecoration(
-              hintText: 'Ne paylaşmak istiyorsun?',
+              hintText: AppTranslations.get('shareInputHint'),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               filled: true,
               fillColor: AppTheme.warmCream,
@@ -169,7 +170,7 @@ class _CampfireShareTabState extends State<CampfireShareTab> {
             ),
           ),
           const SizedBox(height: 16),
-          Text('Seni anlatan bir resim (opsiyonel)', style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppTheme.mutedSage)),
+          Text(AppTranslations.get('imageOptional'), style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppTheme.mutedSage)),
           const SizedBox(height: 6),
           if (_pickedImage != null)
             Stack(
@@ -203,7 +204,7 @@ class _CampfireShareTabState extends State<CampfireShareTab> {
             OutlinedButton.icon(
               onPressed: _pickImage,
               icon: const Icon(Icons.add_photo_alternate_outlined),
-              label: const Text('Fotoğraf ekle (opsiyonel)'),
+              label: Text(AppTranslations.get('addPhoto')),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppTheme.mutedSage,
                 side: BorderSide(color: AppTheme.softBorder),
@@ -214,7 +215,7 @@ class _CampfireShareTabState extends State<CampfireShareTab> {
           FilledButton(
             onPressed: _sending ? null : _submit,
             style: FilledButton.styleFrom(backgroundColor: AppTheme.terracotta, padding: const EdgeInsets.symmetric(vertical: 14)),
-            child: _sending ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('Paylaş'),
+            child: _sending ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : Text(AppTranslations.get('share')),
           ),
         ],
       ),

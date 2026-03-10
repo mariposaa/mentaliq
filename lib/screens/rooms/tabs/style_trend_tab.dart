@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import '../../../config/app_theme.dart';
-import '../../../services/gemini_service.dart';
+import '../../../models/style_outfit_record.dart';
+import '../../../services/style_outfit_history_service.dart';
 
 class StyleTrendTab extends StatefulWidget {
   const StyleTrendTab({super.key});
@@ -11,114 +12,141 @@ class StyleTrendTab extends StatefulWidget {
 }
 
 class _StyleTrendTabState extends State<StyleTrendTab> {
-  String _trends = '';
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadTrends();
-  }
-
-  Future<void> _loadTrends() async {
-    try {
-      final trendsDoc = await FirebaseFirestore.instance.collection('trends').doc('style_trends').get();
-      
-      if (trendsDoc.exists) {
-        final data = trendsDoc.data()!;
-        final lastUpdated = (data['last_updated'] as Timestamp).toDate();
-        final now = DateTime.now();
-        
-        // Eğer 7 günden az zaman geçmişse cache'den kullan
-        if (now.difference(lastUpdated).inDays < 7) {
-          if (mounted) {
-            setState(() {
-              _trends = data['content'] ?? '';
-              _isLoading = false;
-            });
-            return;
-          }
-        }
-      }
-
-      // Cache yok veya eski ise yeni trend oluştur
-      final prompt = 'Bugünün tarihine ve mevsime göre şu an dünyada ve Türkiye\'de öne çıkan 3 moda trendini kısa başlıklarla açıkla.';
-      final result = await GeminiService.generateResponse(prompt, 'stil_danismanligi');
-      
-      // Firestore'a kaydet (Maliyet yönetimi için)
-      await FirebaseFirestore.instance.collection('trends').doc('style_trends').set({
-        'content': result,
-        'last_updated': FieldValue.serverTimestamp(),
-      });
-
-      if (mounted) {
-        setState(() {
-          _trends = result;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    return StreamBuilder<List<StyleOutfitRecord>>(
+      stream: StyleOutfitHistoryService.watchRecords(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+        final records = snapshot.data ?? [];
+        if (records.isEmpty) {
+          return const Center(
+            child: Text(
+              'Henüz kayıtlı kombin yok.',
+              style: TextStyle(color: AppTheme.mutedSage),
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(14),
+          itemCount: records.length,
+          itemBuilder: (context, index) {
+            final record = records[index];
+            return _buildRecordCard(record);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildRecordCard(StyleOutfitRecord record) {
+    final firstOutfit = record.outfits.isNotEmpty ? record.outfits.first : null;
+    final previewImages = firstOutfit?.previewImages() ?? const <String>[];
+    final createdAtText = DateFormat('dd.MM.yyyy HH:mm').format(record.createdAt);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.softBorder),
+        boxShadow: AppTheme.cardShadow,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Trend Radarı 🌟', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24)),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  record.query,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.forestCharcoal,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Text(
+                createdAtText,
+                style: const TextStyle(fontSize: 11, color: AppTheme.mutedSage),
+              ),
+            ],
+          ),
           const SizedBox(height: 8),
-          const Text('Bu hafta moda dünyasında neler oluyor?', style: TextStyle(color: AppTheme.mutedSage)),
-          const SizedBox(height: 24),
-          _buildTrendCard(_trends),
-          const SizedBox(height: 40),
-          _buildStyleTip('Bir stili tamamlayan en önemli parça, özgüvendir. ✨'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTrendCard(String content) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppTheme.forestCharcoal, AppTheme.forestCharcoal.withOpacity(0.8)],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: AppTheme.softShadow,
-      ),
-      child: Text(
-        content,
-        style: const TextStyle(color: Colors.white, height: 1.8, fontSize: 15),
-      ),
-    );
-  }
-
-  Widget _buildStyleTip(String tip) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.sageGreen.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.sageGreen.withOpacity(0.3)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.lightbulb_outline_rounded, color: AppTheme.sageGreen),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(tip, style: const TextStyle(color: AppTheme.sageGreen, fontWeight: FontWeight.w500)),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              _buildChip(record.sourceMode == 'gardrop_disi_oneri' ? 'Gardrop Disi Oneri' : 'Sadece Arsivim'),
+              if ((record.moodTag ?? '').isNotEmpty) _buildChip(record.moodTag!),
+              if (record.weather.isNotEmpty) _buildChip(record.weather),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            record.recommendation,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12, color: AppTheme.mutedSage, height: 1.3),
+          ),
+          if (previewImages.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: previewImages.take(3).map((url) {
+                return Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.network(
+                      url,
+                      width: 64,
+                      height: 72,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        width: 64,
+                        height: 72,
+                        color: AppTheme.sandBeige,
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.broken_image_outlined, size: 16),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: () => StyleOutfitHistoryService.deleteRecord(record.id),
+              icon: const Icon(Icons.delete_outline_rounded, size: 18),
+              label: const Text('Sil'),
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildChip(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppTheme.warmCream,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppTheme.softBorder),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 10, color: AppTheme.forestCharcoal),
       ),
     );
   }

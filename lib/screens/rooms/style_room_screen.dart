@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
-import 'package:image_picker/image_picker.dart';
 import '../../config/app_theme.dart';
+import '../../l10n/app_translations.dart';
 import 'tabs/style_closet_tab.dart';
 import 'tabs/style_analysis_tab.dart';
 import 'tabs/style_trend_tab.dart';
@@ -15,12 +14,11 @@ class StyleRoomScreen extends StatefulWidget {
 
 class _StyleRoomScreenState extends State<StyleRoomScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final ImagePicker _picker = ImagePicker();
 
-  final List<_TabInfo> _tabs = [
-    _TabInfo(label: 'Analiz', icon: Icons.insights_rounded),
-    _TabInfo(label: 'Gardırobum', icon: Icons.straighten_rounded),
-    _TabInfo(label: 'Trendler', icon: Icons.trending_up_rounded),
+  late final List<_TabInfo> _tabs = [
+    _TabInfo(label: AppTranslations.get('styleAnalysis'), icon: Icons.insights_rounded),
+    _TabInfo(label: AppTranslations.get('myCloset'), icon: Icons.straighten_rounded),
+    _TabInfo(label: 'Kayitlar', icon: Icons.bookmark_outline_rounded),
   ];
 
   @override
@@ -119,14 +117,14 @@ class _StyleRoomScreenState extends State<StyleRoomScreen> with SingleTickerProv
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Stil Danışmanlığı',
+                      AppTranslations.get('styleConsulting'),
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: AppTheme.forestCharcoal,
                           ),
                     ),
                     Text(
-                      'Dijital Arşiv ve Kombin Asistanı',
+                      AppTranslations.get('digitalArchiveAssistant'),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppTheme.mutedSage,
                             letterSpacing: 0.5,

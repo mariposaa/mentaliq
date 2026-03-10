@@ -1,22 +1,38 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'auth_service.dart';
+import '../l10n/app_translations.dart';
 
 /// Mood tracking service - stores daily moods for analysis
 class MoodService {
   static FirebaseFirestore get _firestore => AuthService.firestore;
 
-  /// Available moods with Turkish labels and descriptions
-  static const List<Map<String, String>> availableMoods = [
-    {'id': 'mutlu', 'emoji': '😊', 'label': 'Mutlu', 'color': '0xFF4CAF50'},
-    {'id': 'huzurlu', 'emoji': '😌', 'label': 'Huzurlu', 'color': '0xFF81C784'},
-    {'id': 'notr', 'emoji': '😐', 'label': 'Nötr', 'color': '0xFF9E9E9E'},
-    {'id': 'yorgun', 'emoji': '😩', 'label': 'Yorgun', 'color': '0xFFFF9800'},
-    {'id': 'uzgun', 'emoji': '😢', 'label': 'Üzgün', 'color': '0xFF2196F3'},
-    {'id': 'gergin', 'emoji': '😤', 'label': 'Gergin', 'color': '0xFFF44336'},
-    {'id': 'endiseli', 'emoji': '😰', 'label': 'Endişeli', 'color': '0xFF9C27B0'},
-    {'id': 'kaygi', 'emoji': '😟', 'label': 'Kaygılı', 'color': '0xFFE91E63'},
+  static const Map<String, String> _moodTranslationKeys = {
+    'mutlu': 'moodHappy',
+    'huzurlu': 'moodPeaceful',
+    'notr': 'moodNeutral',
+    'yorgun': 'moodTired',
+    'uzgun': 'moodSad',
+    'gergin': 'moodTense',
+    'endiseli': 'moodAnxious',
+    'kaygi': 'moodWorried',
+  };
+
+  static const List<Map<String, String>> _moodData = [
+    {'id': 'mutlu', 'emoji': '😊', 'color': '0xFF4CAF50'},
+    {'id': 'huzurlu', 'emoji': '😌', 'color': '0xFF81C784'},
+    {'id': 'notr', 'emoji': '😐', 'color': '0xFF9E9E9E'},
+    {'id': 'yorgun', 'emoji': '😩', 'color': '0xFFFF9800'},
+    {'id': 'uzgun', 'emoji': '😢', 'color': '0xFF2196F3'},
+    {'id': 'gergin', 'emoji': '😤', 'color': '0xFFF44336'},
+    {'id': 'endiseli', 'emoji': '😰', 'color': '0xFF9C27B0'},
+    {'id': 'kaygi', 'emoji': '😟', 'color': '0xFFE91E63'},
   ];
+
+  static List<Map<String, String>> get availableMoods => _moodData.map((m) {
+        final key = _moodTranslationKeys[m['id']!] ?? m['id']!;
+        return {...m, 'label': AppTranslations.get(key)};
+      }).toList();
 
   /// Save today's mood
   static Future<void> saveMood(String moodId) async {

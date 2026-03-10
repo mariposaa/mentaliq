@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
+import '../../../l10n/app_translations.dart';
 import '../../../models/goal_model.dart';
 import '../../../services/goal_service.dart';
 import '../../../services/roadmap_generator_service.dart';
@@ -153,9 +154,9 @@ class _MotivationHabitsTabState extends State<MotivationHabitsTab>
     if (!success && mounted) {
       // Revert if failed
       _loadRoadmap();
-      _showSnackbar('Durum güncellenirken bir hata oluştu.');
+      _showSnackbar(AppTranslations.get('errorStatusUpdate'));
     } else if (success) {
-      _showSnackbar(newStatus ? 'Görev tamamlandı! 🎉' : 'Görev geri alındı.');
+      _showSnackbar(newStatus ? AppTranslations.get('taskCompleted') : AppTranslations.get('taskUndone'));
     }
   }
 
@@ -213,7 +214,7 @@ class _MotivationHabitsTabState extends State<MotivationHabitsTab>
     
     if (!success && mounted) {
       _loadRoadmap();
-      _showSnackbar('Güncelleme başarısız oldu.');
+      _showSnackbar(AppTranslations.get('updateFailed'));
     }
   }
 
@@ -221,12 +222,12 @@ class _MotivationHabitsTabState extends State<MotivationHabitsTab>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Yol Haritasını Yeniden Oluştur?'),
-        content: const Text('Bu işlem mevcut yol haritasını ve tamamlanma durumlarını sıfırlayacaktır. Hedefindeki değişikliklere göre yeni bir plan hazırlansın mı?'),
+        title: Text(AppTranslations.get('recreateRoadmap')),
+        content: Text(AppTranslations.get('recreateRoadmapConfirm')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('İptal'),
+            child: Text(AppTranslations.get('cancel')),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
@@ -234,7 +235,7 @@ class _MotivationHabitsTabState extends State<MotivationHabitsTab>
               backgroundColor: const Color(0xFF9C27B0),
               foregroundColor: Colors.white,
             ),
-            child: const Text('Yeniden Oluştur'),
+            child: Text(AppTranslations.get('recreate')),
           ),
         ],
       ),
@@ -255,7 +256,7 @@ class _MotivationHabitsTabState extends State<MotivationHabitsTab>
         onSave: (note) {
           // TODO: Save progress note
           Navigator.pop(context);
-          _showSnackbar('Not kaydedildi ✓');
+          _showSnackbar(AppTranslations.get('noteSaved'));
         },
       ),
     );
@@ -322,7 +323,7 @@ class _MotivationHabitsTabState extends State<MotivationHabitsTab>
             ),
             const SizedBox(height: 20),
             Text(
-              'Önce hedefini tanımla',
+              AppTranslations.get('noGoalTitle'),
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -331,7 +332,7 @@ class _MotivationHabitsTabState extends State<MotivationHabitsTab>
             ),
             const SizedBox(height: 8),
             Text(
-              'Yol haritası oluşturmak için "Hedef" sekmesinden hedefini gir.',
+              AppTranslations.get('noGoalHabitsMsg'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -354,7 +355,7 @@ class _MotivationHabitsTabState extends State<MotivationHabitsTab>
                     Icon(Icons.refresh_rounded, size: 18, color: const Color(0xFF9C27B0)),
                     const SizedBox(width: 8),
                     Text(
-                      'Yenile',
+                      AppTranslations.get('refresh'),
                       style: TextStyle(
                         color: const Color(0xFF9C27B0),
                         fontWeight: FontWeight.w500,
@@ -387,7 +388,7 @@ class _MotivationHabitsTabState extends State<MotivationHabitsTab>
             ),
             const SizedBox(height: 24),
             Text(
-              'Yol Haritası Oluşturuluyor...',
+              AppTranslations.get('roadmapCreating'),
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -396,7 +397,7 @@ class _MotivationHabitsTabState extends State<MotivationHabitsTab>
             ),
             const SizedBox(height: 8),
             Text(
-              'Hedefine özel strateji planı hazırlanıyor.',
+              AppTranslations.get('roadmapPreparing'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -429,7 +430,7 @@ class _MotivationHabitsTabState extends State<MotivationHabitsTab>
             ),
             const SizedBox(height: 20),
             Text(
-              'Yol haritası hazır değil',
+              AppTranslations.get('roadmapNotReady'),
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -445,8 +446,8 @@ class _MotivationHabitsTabState extends State<MotivationHabitsTab>
                   color: const Color(0xFF9C27B0),
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: const Text(
-                  '🚀 Yol Haritası Oluştur',
+                child: Text(
+                  AppTranslations.get('createRoadmap'),
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
@@ -534,12 +535,12 @@ class _MotivationHabitsTabState extends State<MotivationHabitsTab>
                     IconButton(
                       icon: const Icon(Icons.refresh_rounded, size: 20, color: Color(0xFF9C27B0)),
                       onPressed: _isGenerating ? null : _confirmRegenerate,
-                      tooltip: 'Yol Haritasını Yeniden Oluştur',
+                      tooltip: AppTranslations.get('recreateRoadmap'),
                     ),
                   ],
                 ),
                 Text(
-                  '${_roadmap!.steps.length} haftalık program',
+                  AppTranslations.format('weeklyProgram', ['${_roadmap!.steps.length}']),
                   style: TextStyle(
                     fontSize: 12,
                     color: AppTheme.mutedSage,
@@ -688,7 +689,7 @@ class _MotivationHabitsTabState extends State<MotivationHabitsTab>
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            'Gelişme Notu Ekle',
+                            AppTranslations.get('addProgressNote'),
                             style: TextStyle(
                               fontSize: 12,
                               color: const Color(0xFF9C27B0),
@@ -809,9 +810,9 @@ class _ProgressNoteSheetState extends State<_ProgressNoteSheet> {
   String? _selectedMood;
 
   final List<Map<String, String>> _moods = [
-    {'emoji': '😊', 'label': 'Kolaydı'},
-    {'emoji': '😐', 'label': 'Normal'},
-    {'emoji': '😰', 'label': 'Zorlandım'},
+    {'emoji': '😊', 'label': 'easyMood'},
+    {'emoji': '😐', 'label': 'normalMood'},
+    {'emoji': '😰', 'label': 'struggledMood'},
   ];
 
   @override
@@ -851,7 +852,7 @@ class _ProgressNoteSheetState extends State<_ProgressNoteSheet> {
             
             // Title
             Text(
-              'Gelişme Notu',
+              AppTranslations.get('progressNote'),
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -870,7 +871,7 @@ class _ProgressNoteSheetState extends State<_ProgressNoteSheet> {
             
             // Mood selection
             Text(
-              'Nasıl hissettin?',
+              AppTranslations.get('howDidYouFeel'),
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
@@ -904,7 +905,7 @@ class _ProgressNoteSheetState extends State<_ProgressNoteSheet> {
                           Text(mood['emoji']!, style: const TextStyle(fontSize: 24)),
                           const SizedBox(height: 4),
                           Text(
-                            mood['label']!,
+                            AppTranslations.get(mood['label']!),
                             style: TextStyle(
                               fontSize: 11,
                               color: isSelected 
@@ -926,7 +927,7 @@ class _ProgressNoteSheetState extends State<_ProgressNoteSheet> {
               controller: _noteController,
               maxLines: 3,
               decoration: InputDecoration(
-                hintText: 'Kısa bir not düş...',
+                hintText: AppTranslations.get('noteHint'),
                 hintStyle: TextStyle(color: AppTheme.mutedSage),
                 filled: true,
                 fillColor: AppTheme.warmCream,
@@ -952,10 +953,10 @@ class _ProgressNoteSheetState extends State<_ProgressNoteSheet> {
                   color: const Color(0xFF9C27B0),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Center(
+                child: Center(
                   child: Text(
-                    'Kaydet',
-                    style: TextStyle(
+                    AppTranslations.get('save'),
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,

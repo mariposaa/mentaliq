@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../config/app_theme.dart';
+import '../../../l10n/app_translations.dart';
 import '../../../models/goal_model.dart';
 import '../../../services/goal_service.dart';
 import '../../../services/dream_series_service.dart';
@@ -112,7 +113,7 @@ class _MotivationChatTabState extends State<MotivationChatTab>
         // Scroll to bottom after generation
       } else {
         setState(() => _isGenerating = false);
-        _showSnackbar('Sahne oluşturulurken bir hata oluştu.');
+        _showSnackbar(AppTranslations.get('errorSceneCreation'));
       }
     }
   }
@@ -123,12 +124,12 @@ class _MotivationChatTabState extends State<MotivationChatTab>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Senaryoyu Sıfırla?'),
-        content: const Text('Mevcut gelecek senaryonuz silinecek ve yeni hedefinize göre en baştan (Pilot Bölüm) başlayacaktır. Emin misiniz?'),
+        title: Text(AppTranslations.get('resetScenario')),
+        content: Text(AppTranslations.get('resetScenarioConfirm')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('İptal'),
+            child: Text(AppTranslations.get('cancel')),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
@@ -136,7 +137,7 @@ class _MotivationChatTabState extends State<MotivationChatTab>
               backgroundColor: const Color(0xFF9C27B0),
               foregroundColor: Colors.white,
             ),
-            child: const Text('Sıfırla ve Başa Dön'),
+            child: Text(AppTranslations.get('resetAndStartOver')),
           ),
         ],
       ),
@@ -147,7 +148,7 @@ class _MotivationChatTabState extends State<MotivationChatTab>
       await DreamSeriesService.resetSeries(_goal!.id);
       await _loadData();
       if (mounted) {
-        _showSnackbar('Senaryo sıfırlandı. Yeni hikayeni başlatabilirsin! 🎬');
+        _showSnackbar(AppTranslations.get('scenarioResetSuccess'));
       }
     }
   }
@@ -194,13 +195,13 @@ class _MotivationChatTabState extends State<MotivationChatTab>
           children: [
             const Text('⚠️', style: TextStyle(fontSize: 48)),
             const SizedBox(height: 16),
-            const Text(
-              'Önce hedefini tanımla',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              AppTranslations.get('noGoalTitle'),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
-              'Gelecek dizini başlatmak için "Hedef" sekmesinden giriş yapmalısın.',
+              AppTranslations.get('noGoalMessage'),
               textAlign: TextAlign.center,
               style: TextStyle(color: AppTheme.mutedSage),
             ),
@@ -225,21 +226,21 @@ class _MotivationChatTabState extends State<MotivationChatTab>
             child: const Text('🎬', style: TextStyle(fontSize: 64)),
           ),
           const SizedBox(height: 32),
-          const Text(
-            'Gelecek Dizisi: Başrol Sensin',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          Text(
+            AppTranslations.get('futureSeriesTitle'),
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
           Text(
-            'Hedefine ulaştığın o muhteşem günleri adım adım izlemeye hazır mısın?',
+            AppTranslations.get('futureSeriesDesc'),
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 16, color: AppTheme.mutedSage),
           ),
           const SizedBox(height: 48),
           _buildPrimaryButton(
             onTap: _isGenerating ? null : _startJourney,
-            label: _isGenerating ? 'Sahne Hazırlanıyor...' : 'Pilot Bölümü Oynat',
+            label: _isGenerating ? AppTranslations.get('scenePreparing') : AppTranslations.get('playPilotEpisode'),
             isLoading: _isGenerating,
             icon: Icons.play_arrow_rounded,
           ),
@@ -280,7 +281,7 @@ class _MotivationChatTabState extends State<MotivationChatTab>
               child: IconButton(
                 icon: const Icon(Icons.refresh_rounded, color: Color(0xFF9C27B0), size: 24),
                 onPressed: _resetSeries,
-                tooltip: 'Senaryoyu Sıfırla',
+                tooltip: AppTranslations.get('resetScenarioTooltip'),
               ),
             ),
           ),
@@ -380,7 +381,7 @@ class _MotivationChatTabState extends State<MotivationChatTab>
           children: [
             const CircularProgressIndicator(color: Color(0xFF9C27B0)),
             const SizedBox(height: 12),
-            Text('Sahne Kuruluyor...', style: TextStyle(color: AppTheme.mutedSage, fontSize: 13)),
+            Text(AppTranslations.get('sceneSettingUp'), style: TextStyle(color: AppTheme.mutedSage, fontSize: 13)),
           ],
         ),
       );
@@ -401,9 +402,9 @@ class _MotivationChatTabState extends State<MotivationChatTab>
             children: [
               const Icon(Icons.movie_creation_outlined, size: 18, color: Color(0xFF9C27B0)),
               const SizedBox(width: 8),
-              const Text(
-                'Yönetmen Notu',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              Text(
+                AppTranslations.get('directorNote'),
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -417,7 +418,7 @@ class _MotivationChatTabState extends State<MotivationChatTab>
             controller: _inputController,
             maxLines: 2,
             decoration: InputDecoration(
-              hintText: 'Fikrini buraya yaz...',
+              hintText: AppTranslations.get('ideaInputHint'),
               contentPadding: const EdgeInsets.all(16),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -440,7 +441,7 @@ class _MotivationChatTabState extends State<MotivationChatTab>
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text('Sonraki Bölümü Oynat'),
+              child: Text(AppTranslations.get('playNextEpisode')),
             ),
           ),
         ],
@@ -451,9 +452,9 @@ class _MotivationChatTabState extends State<MotivationChatTab>
   Widget _buildLockedItem(int index) {
     String title = '';
     switch (index) {
-      case 1: title = 'Bölüm 2: Yeni Normal'; break;
-      case 2: title = 'Bölüm 3: Meyveler'; break;
-      case 3: title = 'Final: Dönüşüm'; break;
+      case 1: title = AppTranslations.get('episode2'); break;
+      case 2: title = AppTranslations.get('episode3'); break;
+      case 3: title = AppTranslations.get('finalEpisode'); break;
     }
 
     return Opacity(
@@ -472,9 +473,9 @@ class _MotivationChatTabState extends State<MotivationChatTab>
             const SizedBox(height: 12),
             Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
-            const Text(
-              'Kilidi açmak için önceki bölümü tamamla',
-              style: TextStyle(fontSize: 12),
+            Text(
+              AppTranslations.get('unlockPrevious'),
+              style: const TextStyle(fontSize: 12),
             ),
           ],
         ),

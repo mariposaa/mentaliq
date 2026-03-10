@@ -1,13 +1,75 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
 import '../models/user_dna_model.dart';
 import '../services/user_dna_service.dart';
 import '../services/gemini_service.dart';
 
-/// ACTIVE ADDICTION SERVICE (MASTER PLAN)
+enum AddictionRiskMode { normal, elevated, crisis, relapseRecovery }
+
+class AddictionSnapshot {
+  final AddictionDna addiction;
+  final int riskScore;
+  final AddictionRiskMode mode;
+  final String modeLabel;
+  final String modeHint;
+
+  const AddictionSnapshot({
+    required this.addiction,
+    required this.riskScore,
+    required this.mode,
+    required this.modeLabel,
+    required this.modeHint,
+  });
+}
+
+class MissionVerificationResult {
+  final bool approved;
+  final String message;
+
+  const MissionVerificationResult({
+    required this.approved,
+    required this.message,
+  });
+}
+
+class AddictionIntakeResult {
+  final int severity; // 0-10
+  final String stage;
+  final int dailyEpisodes;
+  final String summary;
+  final String focus;
+
+  const AddictionIntakeResult({
+    required this.severity,
+    required this.stage,
+    required this.dailyEpisodes,
+    required this.summary,
+    required this.focus,
+  });
+}
+
+/// Phase-1 addiction support engine
 class AddictionService {
-  
-  // --- SYSTEM PROMPTS (MULTI-ROLE) ---
+  static const Map<String, String> trackedTypeById = {
+    'gambling': 'behavioral',
+    'smoking': 'substance',
+    'sugar': 'substance',
+    'social_media': 'behavioral',
+    'gaming': 'behavioral',
+    'vaping': 'substance',
+  };
+
+  static const List<String> _criticalSafetyKeywords = [
+    'intihar',
+    'kendime zarar',
+    'kendimi oldur',
+    'yasamak istemiyorum',
+    'i want to die',
+    'kill myself',
+    'self harm',
+    'suicide',
+    'overdose',
+    'olmek istiyorum',
+  ];
 
   static String _getAuditorPrompt() {
     return '''
@@ -57,89 +119,478 @@ Language: Detect user's system language and respond in that language.
     return _getBioHackerPrompt(); // Default fallback
   }
 
-  // --- METHODS ---
+  static String _sanitizeText(String text) {
+    return text.replaceAll('"', '').trim();
+  }
 
-  /// 1. ENTRY GREETING (Reality Check)
+  static List<String> getIntakeQuestions(String addictionId) {
+    if (addictionId == 'gambling') {
+      return const [
+        'Son 7 gunde kac kez kumar oynadin?',
+        'Bir oturumda ortalama ne kadar para riske atiyorsun?',
+        'En guclu tetikleyicin ne? (stres, can sikintisi, yalnizlik...)',
+        'Kaybettikten sonra geri almaya calisiyor musun?',
+        'Birakmaya hazirlik seviyen kac? (0-10)',
+      ];
+    }
+    if (addictionId == 'smoking') {
+      return const [
+        'Gunde ortalama kac sigara tuketiyorsun?',
+        'Ilk sigarayi uyandiktan ne kadar sonra iciyorsun?',
+        'En guclu tetikleyicin ne? (kahve, stres, sosyal ortam...)',
+        'Daha once birakma denemesi yaptin mi?',
+        'Birakmaya hazirlik seviyen kac? (0-10)',
+      ];
+    }
+    if (addictionId == 'social_media') {
+      return const [
+        'Gunde ortalama kac saat sosyal medya kullaniyorsun?',
+        'En cok hangi saatlerde kontrol ediyorsun?',
+        'Tetikleyicin ne? (yalnizlik, kacis, aliskanlik...)',
+        'Kontrol kaybi hissediyor musun? (bildirim gelmese de bakma)',
+        'Azaltmaya hazirlik seviyen kac? (0-10)',
+      ];
+    }
+    return const [
+      'Son 7 gunde bu davranis kac kez oldu?',
+      'En guclu tetikleyicin ne?',
+      'Kontrol kaybi hissettigin oluyor mu?',
+      'Degisime hazirlik seviyen kac? (0-10)',
+    ];
+  }
+
+  static bool needsIntake(String addictionId) {
+    final a = _findAddiction(addictionId);
+    return a == null || !a.assessmentCompleted;
+  }
+
+  static bool isHighSafetyRiskMessage(String message) {
+    final lowered = message.toLowerCase();
+    return _criticalSafetyKeywords.any(lowered.contains);
+  }
+
+  static String getHardSafetyResponse() {
+    return 'Bu kritik bir guvenlik durumu olabilir. '
+        'Yalniz kalma. Hemen guven kisini veya yerel acil hatti ara. '
+        'Su an tek hedef guvende kalmak.';
+  }
+
+  static AddictionDna? _findAddiction(String addictionId) {
+    final userDna = UserDNAService.currentDNA;
+    final addictions = userDna?.activeAddictions ?? const <AddictionDna>[];
+    for (final addiction in addictions) {
+      if (addiction.id == addictionId) return addiction;
+    }
+    return null;
+  }
+
+  static Future<void> _updateAddiction(
+    String addictionId,
+    AddictionDna Function(AddictionDna) updater,
+  ) async {
+    final userDna = UserDNAService.currentDNA;
+    if (userDna == null || userDna.activeAddictions == null) return;
+
+    final updatedAddictions = userDna.activeAddictions!.map((a) {
+      if (a.id == addictionId) return updater(a);
+      return a;
+    }).toList();
+
+    await UserDNAService.updateDNA(UserDNAModel(activeAddictions: updatedAddictions));
+  }
+
+  static int _riskScoreFor(AddictionDna addiction) {
+    final lowWillpowerRisk = (1 - addiction.willpowerIndex).clamp(0.0, 1.0) * 60;
+    final triggerRisk = (addiction.triggers.length * 4).clamp(0, 20);
+    final streakProtection = (addiction.streakDays * 1.5).clamp(0, 20);
+    final severityRisk = (addiction.dependencySeverity * 3).clamp(0, 30);
+    final gamblingRisk = addiction.id == 'gambling'
+        ? (addiction.averageDailyBet * 0.02).clamp(0, 20)
+        : 0.0;
+
+    final raw = lowWillpowerRisk + triggerRisk + severityRisk + gamblingRisk - streakProtection;
+    return raw.round().clamp(0, 100);
+  }
+
+  static AddictionRiskMode _modeFor(AddictionDna addiction, int score) {
+    final recentRelapse = addiction.lastRelapse != null &&
+        DateTime.now().difference(addiction.lastRelapse!).inHours <= 48;
+    if (recentRelapse) return AddictionRiskMode.relapseRecovery;
+    if (score >= 75) return AddictionRiskMode.crisis;
+    if (score >= 50) return AddictionRiskMode.elevated;
+    return AddictionRiskMode.normal;
+  }
+
+  static AddictionSnapshot snapshotFromAddiction(AddictionDna addiction) {
+    final score = _riskScoreFor(addiction);
+    final mode = _modeFor(addiction, score);
+
+    switch (mode) {
+      case AddictionRiskMode.crisis:
+        return AddictionSnapshot(
+          addiction: addiction,
+          riskScore: score,
+          mode: mode,
+          modeLabel: 'KRIZ',
+          modeHint: 'Bugun karar degil koruma modu. Ilk hedef 10 dakika dayanmak.',
+        );
+      case AddictionRiskMode.elevated:
+        return AddictionSnapshot(
+          addiction: addiction,
+          riskScore: score,
+          mode: mode,
+          modeLabel: 'YUKSEK RISK',
+          modeHint: 'Bugun mikro adimlar ve tetikleyici azaltma odakta olmali.',
+        );
+      case AddictionRiskMode.relapseRecovery:
+        return AddictionSnapshot(
+          addiction: addiction,
+          riskScore: score,
+          mode: mode,
+          modeLabel: 'NUKS SONRASI',
+          modeHint: 'Sucluluk yerine 24 saatlik toparlanma plani uygula.',
+        );
+      case AddictionRiskMode.normal:
+        return AddictionSnapshot(
+          addiction: addiction,
+          riskScore: score,
+          mode: mode,
+          modeLabel: 'DENGELI',
+          modeHint: 'Ritmi koru. Kisa ve uygulanabilir gorev en iyi kaldirac.',
+        );
+    }
+  }
+
+  static AddictionSnapshot getSnapshot(String addictionId) {
+    final addiction = _findAddiction(addictionId) ??
+        AddictionDna(id: addictionId, type: 'behavioral');
+    return snapshotFromAddiction(addiction);
+  }
+
+  static Future<AddictionIntakeResult> submitIntakeAnswers(
+    String addictionId,
+    Map<String, String> answers,
+  ) async {
+    try {
+      final dna = await UserDNAService.getDNAForAI();
+      final sysPrompt = _getSystemPromptFor(addictionId);
+      final lines = answers.entries
+          .map((e) => '- ${e.key}: ${e.value}')
+          .join('\n');
+      final response = await GeminiService.generateResponse(
+        '$dna\nAnalyze intake answers for addiction: $addictionId\n$lines\n'
+            'Return STRICT JSON:\n'
+            '{"severity":0-10,"stage":"precontemplation|contemplation|preparation|action|maintenance",'
+            '"daily_episodes":0-99,"summary":"max 2 cümle","focus":"tek odak"}',
+        'addiction_intake',
+        customSystemPrompt: sysPrompt,
+      );
+
+      final clean = response.replaceAll('```json', '').replaceAll('```', '').trim();
+      final map = json.decode(clean) as Map<String, dynamic>;
+      final severity = ((map['severity'] as num?)?.toInt() ?? 5).clamp(0, 10);
+      final stage = (map['stage'] ?? 'contemplation').toString();
+      final dailyEpisodes = ((map['daily_episodes'] as num?)?.toInt() ?? 1).clamp(0, 99);
+      final summary = (map['summary'] ?? '').toString();
+      final focus = (map['focus'] ?? 'tetikleyici kontrol').toString();
+
+      await _updateAddiction(addictionId, (a) {
+        return AddictionDna(
+          id: a.id,
+          type: a.type,
+          willpowerIndex: a.willpowerIndex,
+          streakDays: a.streakDays,
+          totalLostCapital: a.totalLostCapital,
+          averageDailyBet: a.averageDailyBet,
+          highRiskDays: a.highRiskDays,
+          triggers: a.triggers,
+          lastRelapse: a.lastRelapse,
+          currentMission: a.currentMission,
+          isMissionCompleted: a.isMissionCompleted,
+          assessmentCompleted: true,
+          dependencySeverity: severity,
+          changeStage: stage,
+          dailyEpisodes: dailyEpisodes,
+          intakeSummary: summary,
+          lastAssessmentAt: DateTime.now(),
+        );
+      });
+
+      return AddictionIntakeResult(
+        severity: severity,
+        stage: stage,
+        dailyEpisodes: dailyEpisodes,
+        summary: summary,
+        focus: focus,
+      );
+    } catch (_) {
+      await _updateAddiction(addictionId, (a) {
+        return AddictionDna(
+          id: a.id,
+          type: a.type,
+          willpowerIndex: a.willpowerIndex,
+          streakDays: a.streakDays,
+          totalLostCapital: a.totalLostCapital,
+          averageDailyBet: a.averageDailyBet,
+          highRiskDays: a.highRiskDays,
+          triggers: a.triggers,
+          lastRelapse: a.lastRelapse,
+          currentMission: a.currentMission,
+          isMissionCompleted: a.isMissionCompleted,
+          assessmentCompleted: true,
+          dependencySeverity: 5,
+          changeStage: 'contemplation',
+          dailyEpisodes: 1,
+          intakeSummary: 'Temel intake tamamlandi.',
+          lastAssessmentAt: DateTime.now(),
+        );
+      });
+      return const AddictionIntakeResult(
+        severity: 5,
+        stage: 'contemplation',
+        dailyEpisodes: 1,
+        summary: 'Temel intake tamamlandi.',
+        focus: 'tetikleyici kontrol',
+      );
+    }
+  }
+
+  /// Entry line shown at top of module.
   static Future<String> getEntryGreeting(String addictionId) async {
     try {
       final dna = await UserDNAService.getDNAForAI();
       final sysPrompt = _getSystemPromptFor(addictionId);
-      
+      final snap = getSnapshot(addictionId);
       final response = await GeminiService.generateResponse(
-        '$dna\nUSER JUST OPENED THE APP. Give a short, punchy reality check or question based on their stats.',
+        '$dna\nRisk mode: ${snap.modeLabel}, Risk score: ${snap.riskScore}.\n'
+            'User just opened support module. Give one short reality check and one action sentence.',
         'addiction_entry',
-        customSystemPrompt: sysPrompt
+        customSystemPrompt: sysPrompt,
       );
-      return response;
+      return _sanitizeText(response);
     } catch (e) {
       return "Savaş devam ediyor. Hazır mısın?";
     }
   }
 
-  /// 2. ACTIVE MISSION GENERATION
+  static Future<String> _generateMissionFromAI(
+    String addictionId,
+    AddictionSnapshot snap,
+  ) async {
+    try {
+      final dna = await UserDNAService.getDNAForAI();
+      final sysPrompt = _getSystemPromptFor(addictionId);
+      final response = await GeminiService.generateResponse(
+        '$dna\nRisk mode: ${snap.modeLabel}, risk score: ${snap.riskScore}\n'
+            'Severity: ${snap.addiction.dependencySeverity}/10, Stage: ${snap.addiction.changeStage}\n'
+            'Generate one mission under 12 words, completable in <10 min. '
+            'Action only, no explanation.',
+        'addiction_mission',
+        customSystemPrompt: sysPrompt,
+      );
+      return _sanitizeText(response);
+    } catch (e) {
+      return "Bugun sadece dur ve nefesi duzenle.";
+    }
+  }
+
+  /// Creates and persists mission when needed.
+  static Future<String> generateOrGetDailyMission(String addictionId) async {
+    final current = _findAddiction(addictionId);
+    if (current != null &&
+        current.currentMission.isNotEmpty &&
+        !current.isMissionCompleted) {
+      return current.currentMission;
+    }
+
+    final snap = getSnapshot(addictionId);
+    final mission = await _generateMissionFromAI(addictionId, snap);
+    await _updateAddiction(addictionId, (a) {
+      return AddictionDna(
+        id: a.id,
+        type: a.type,
+        willpowerIndex: a.willpowerIndex,
+        streakDays: a.streakDays,
+        totalLostCapital: a.totalLostCapital,
+        averageDailyBet: a.averageDailyBet,
+        highRiskDays: a.highRiskDays,
+        triggers: a.triggers,
+        lastRelapse: a.lastRelapse,
+        currentMission: mission,
+        isMissionCompleted: false,
+        assessmentCompleted: a.assessmentCompleted,
+        dependencySeverity: a.dependencySeverity,
+        changeStage: a.changeStage,
+        dailyEpisodes: a.dailyEpisodes,
+        intakeSummary: a.intakeSummary,
+        lastAssessmentAt: a.lastAssessmentAt,
+      );
+    });
+    return mission;
+  }
+
+  /// Backward-compatible alias.
   static Future<String> getDynamicMission(String addictionId) async {
     try {
-      final dna = await UserDNAService.getDNAForAI();
-      final sysPrompt = _getSystemPromptFor(addictionId);
-      
-      // Determine Willpower State from DNA context (implied in the dna string)
-      // We explicitly guide the AI on how to use it.
-      const missionLogic = '''
-MISSION LOGIC based on Willpower (Flow State Principle):
-- If Willpower is LOW (<40%): Assign a 'Micro-Step' or 'Environmental' task. Low friction. (e.g., "Just put the phone face down", "Drink a glass of water").
-- If Willpower is HIGH (>70%): Assign a 'Cognitive Challenge' or 'Exposure' task. High reward. (e.g., "Write down your trigger analysis", "Sit with the urge for 3 mins").
-- NEVER repeat yesterday's mission.
-- Mission must be actionable and completable in <10 mins.
-''';
-
-      final response = await GeminiService.generateResponse(
-        '$dna\n$missionLogic\nGENERATE DAILY MISSION based on user\'s current stats.',
-        'addiction_mission',
-        customSystemPrompt: sysPrompt
-      );
-      return response.replaceAll('"', '').trim();
+      return await generateOrGetDailyMission(addictionId);
     } catch (e) {
-      return "Bugün sadece iradeni koru.";
+      return "Bugun sadece iradeni koru.";
     }
   }
 
-  /// 3. VERIFICATION CHAT (Before Puan Artışı)
-  static Future<String> verifyMissionCompletion(String addictionId, String userFeeling) async {
+  static Future<MissionVerificationResult> verifyMissionAndMaybeComplete(
+    String addictionId,
+    String userReflection,
+  ) async {
+    final mission = _findAddiction(addictionId)?.currentMission ?? '';
     try {
       final dna = await UserDNAService.getDNAForAI();
       final sysPrompt = _getSystemPromptFor(addictionId);
 
       final response = await GeminiService.generateResponse(
-        '$dna\nUser claims mission complete. Feeling: "$userFeeling". CHALLENGE THEM or VALIDATE based on persona.',
+        '$dna\nDaily mission: "$mission"\n'
+            'User reflection: "$userReflection"\n'
+            'Decide mission completion. Return STRICT JSON only:\n'
+            '{"approved":true/false,"coach_reply":"...max 2 sentences..."}',
         'addiction_verify',
-        customSystemPrompt: sysPrompt
+        customSystemPrompt: sysPrompt,
       );
-      return response;
+
+      final clean = response.replaceAll('```json', '').replaceAll('```', '').trim();
+      final map = json.decode(clean) as Map<String, dynamic>;
+      final approved = map['approved'] == true;
+      final message = (map['coach_reply'] ?? 'Kisa bir check-in daha yapalim.').toString();
+
+      if (approved) {
+        await completeMission(addictionId);
+      }
+
+      return MissionVerificationResult(approved: approved, message: message);
     } catch (e) {
-      return "Tamam, kaydettim.";
+      return const MissionVerificationResult(
+        approved: false,
+        message: "Bu yanitla dogrulama yapamadim. Biraz daha net yaz.",
+      );
     }
   }
 
-  /// 4. CRISIS CHAT (SOS)
-  static Future<Stream<String>> startCrisisChat(String addictionId, String userMessage) async {
-    // This would ideally return a stream of tokens, for now solving with single response future logic disguised
-    // In a real implementation with Gemini Stream, this would be cleaner.
-    // We will just return a single Future wrapped response for this architecture step.
-    return const Stream.empty(); 
+  /// Backward-compatible verification endpoint.
+  static Future<String> verifyMissionCompletion(
+    String addictionId,
+    String userFeeling,
+  ) async {
+    final result = await verifyMissionAndMaybeComplete(addictionId, userFeeling);
+    return result.message;
   }
 
-  /// Backward-compatible SOS helper for old screens.
+  static List<String> getSosProtocol(String addictionId, {String? trigger}) {
+    final cause = (trigger == null || trigger.trim().isEmpty)
+        ? 'durtu'
+        : trigger.trim();
+
+    if (addictionId == 'gambling') {
+      return [
+        '90 sn: Telefonu birak, ayaga kalk, 6 yavas nefes.',
+        '3 dk: Kumar uygulamasi/site erisimini fiziksel olarak kes.',
+        '10 dk: "$cause" tetigini not et ve bir guven kisisiyle paylas.',
+      ];
+    }
+
+    if (addictionId == 'smoking') {
+      return [
+        '60 sn: Derin nefes + su ile yuz sogut.',
+        '3 dk: Sigara yerine agiz meşgul edecek alternatif kullan.',
+        '10 dk: "$cause" anini yaz, yuru ve geri dön.',
+      ];
+    }
+
+    if (addictionId == 'social_media') {
+      return [
+        '60 sn: Ekrani kapat, telefonu farkli odaya koy.',
+        '3 dk: Gri ton + bildirim kapatma uygula.',
+        '10 dk: "$cause" yerine analog bir mini aktivite yap.',
+      ];
+    }
+
+    return [
+      '60 sn: Nefesini yavaslat ve bedeni sakinlestir.',
+      '3 dk: Tetikleyiciden fiziksel uzaklas.',
+      '10 dk: "$cause" yerine tek bir saglikli alternatif sec.',
+    ];
+  }
+
+  static Future<void> saveQuickCheckIn(
+    String addictionId, {
+    required int cravingLevel,
+    required String trigger,
+  }) async {
+    await _updateAddiction(addictionId, (a) {
+      final nextTriggers = <String>{...a.triggers};
+      final cleanTrigger = trigger.trim();
+      if (cleanTrigger.isNotEmpty) {
+        nextTriggers.add(cleanTrigger);
+      }
+
+      final delta = cravingLevel >= 8
+          ? -0.08
+          : cravingLevel >= 5
+              ? -0.04
+              : 0.02;
+
+      return AddictionDna(
+        id: a.id,
+        type: a.type,
+        willpowerIndex: (a.willpowerIndex + delta).clamp(0.0, 1.0),
+        streakDays: a.streakDays,
+        totalLostCapital: a.totalLostCapital,
+        averageDailyBet: a.averageDailyBet,
+        highRiskDays: a.highRiskDays,
+        triggers: nextTriggers.toList(),
+        lastRelapse: cravingLevel >= 9 ? DateTime.now() : a.lastRelapse,
+        currentMission: a.currentMission,
+        isMissionCompleted: a.isMissionCompleted,
+        assessmentCompleted: a.assessmentCompleted,
+        dependencySeverity: a.dependencySeverity,
+        changeStage: a.changeStage,
+        dailyEpisodes: a.dailyEpisodes,
+        intakeSummary: a.intakeSummary,
+        lastAssessmentAt: a.lastAssessmentAt,
+      );
+    });
+  }
+
+  static Future<String> getProactiveNudge(String addictionId) async {
+    final snap = getSnapshot(addictionId);
+    try {
+      final dna = await UserDNAService.getDNAForAI();
+      final sysPrompt = _getSystemPromptFor(addictionId);
+      final response = await GeminiService.generateResponse(
+        '$dna\nRisk mode: ${snap.modeLabel}.\n'
+            'Give one proactive nudge in max 1 sentence.',
+        'addiction_proactive',
+        customSystemPrompt: sysPrompt,
+      );
+      return _sanitizeText(response);
+    } catch (_) {
+      return snap.mode == AddictionRiskMode.crisis
+          ? 'Karar verme. Sadece 3 dakika geciktir.'
+          : 'Bugun tek hedef: tetikleyiciyi bir adim zorlastir.';
+    }
+  }
+
+  /// 4. CRISIS CHAT (legacy stream placeholder)
+  static Future<Stream<String>> startCrisisChat(String addictionId, String userMessage) async {
+    return const Stream.empty();
+  }
+
+  /// Backward-compatible SOS helper.
   static Future<List<String>?> triggerEmergency(String addictionId) async {
     try {
       final first = await handleCrisisMessage(
         addictionId,
         'Acil durumdayım. Beni şimdi gerçekliğe döndür.',
       );
-      return [
-        first,
-        'Kasa senden hızlıdır; dürtün senden hızlı değil.',
-        'Şu an sadece 3 dakika bekle ve tek bir derin nefes döngüsü yap.',
-      ];
+      return [first, ...getSosProtocol(addictionId)];
     } catch (_) {
       return null;
     }
@@ -150,13 +601,12 @@ MISSION LOGIC based on Willpower (Flow State Principle):
       final dna = await UserDNAService.getDNAForAI();
       final sysPrompt = _getSystemPromptFor(addictionId);
       
-      // Add Urgency
       final fullPrompt = '$sysPrompt\nCRISIS MODE ACTIVE. USER SAYS: "$message". RESPOND IMMEDIATELY.';
 
       final response = await GeminiService.generateResponse(
         '$dna\nCRISIS: $message',
         'addiction_sos',
-        customSystemPrompt: fullPrompt
+        customSystemPrompt: fullPrompt,
       );
       return response;
     } catch (e) {
@@ -164,40 +614,43 @@ MISSION LOGIC based on Willpower (Flow State Principle):
     }
   }
 
-  // --- STATE UPDATES ---
-
   static Future<void> completeMission(String addictionId) async {
-    final userDna = UserDNAService.currentDNA;
-    if (userDna == null || userDna.activeAddictions == null) return;
-
-    final updatedAddictions = userDna.activeAddictions!.map((a) {
-      if (a.id == addictionId) {
-        return AddictionDna(
-          id: a.id,
-          type: a.type,
-          willpowerIndex: (a.willpowerIndex + 0.05).clamp(0.0, 1.0), // Boost
-          streakDays: a.streakDays + 1,
-          totalLostCapital: a.totalLostCapital,
-          averageDailyBet: a.averageDailyBet,
-          highRiskDays: a.highRiskDays,
-          triggers: a.triggers,
-          currentMission: a.currentMission, 
-          isMissionCompleted: true, // Mark done
-        );
-      }
-      return a;
-    }).toList();
-
-    await UserDNAService.updateDNA(UserDNAModel(activeAddictions: updatedAddictions));
+    await _updateAddiction(addictionId, (a) {
+      return AddictionDna(
+        id: a.id,
+        type: a.type,
+        willpowerIndex: (a.willpowerIndex + 0.05).clamp(0.0, 1.0),
+        streakDays: a.streakDays + 1,
+        totalLostCapital: a.totalLostCapital,
+        averageDailyBet: a.averageDailyBet,
+        highRiskDays: a.highRiskDays,
+        triggers: a.triggers,
+        lastRelapse: a.lastRelapse,
+        currentMission: a.currentMission,
+        isMissionCompleted: true,
+        assessmentCompleted: a.assessmentCompleted,
+        dependencySeverity: a.dependencySeverity,
+        changeStage: a.changeStage,
+        dailyEpisodes: a.dailyEpisodes,
+        intakeSummary: a.intakeSummary,
+        lastAssessmentAt: a.lastAssessmentAt,
+      );
+    });
   }
 
   static Future<void> startTracking(String id, String type) async {
     final userDna = UserDNAService.currentDNA;
     final currentList = userDna?.activeAddictions ?? [];
     
-    if (currentList.any((a) => a.id == id)) return; // Already tracking
+    if (currentList.any((a) => a.id == id)) return;
 
     final newList = [...currentList, AddictionDna(id: id, type: type)];
     await UserDNAService.updateDNA(UserDNAModel(activeAddictions: newList));
+  }
+
+  static Future<void> ensureTrackingForId(String id) async {
+    final type = trackedTypeById[id];
+    if (type == null) return;
+    await startTracking(id, type);
   }
 }

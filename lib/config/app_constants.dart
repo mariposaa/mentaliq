@@ -1,63 +1,62 @@
-// Mentaliq App Constants
+import '../l10n/app_translations.dart';
 
 class AppConstants {
-  // App Info
   static const String appName = 'mentaliq';
   static const String appVersion = '1.0.0';
-  
-  // Firebase Collections
+
   static const String usersCollection = 'users';
   static const String chatsCollection = 'chats';
   static const String messagesCollection = 'messages';
-  
-  // AI Categories - Wellness & Support focused
+
   static const List<String> aiCategories = [
     'iliskiler',
-    'anksiyete', // Astroloji ve Rüya
-    'kendin_kesfet', // Persona Psikoloji
+    'anksiyete',
+    'ruya_tabiri',
+    'kendin_kesfet',
     'stil_danismanligi',
-    'motivasyon', // Gelecek Mimarı
-    'duygusal_destek', // Şefkatli Gölge
+    'duygusal_destek',
     'bagimliliklar',
   ];
 
-  
-  // Category Display Names (Turkish - Friendly)
-  static const Map<String, String> categoryNames = {
-    'iliskiler': 'Siber-Dost ve İlişki Mimarı',
-    'duygusal_destek': 'Şefkatli Gölge',
-    'stil_danismanligi': 'Dolabım',
-    'anksiyete': 'Astroloji ve Rüya (Cyber-Mistik)',
-    'kendin_kesfet': 'Persona Psikoloji',
-    'bagimliliklar': 'Bağımlılıklarım',
-    'motivasyon': 'Gelecek Mimarı',
+  static const Map<String, String> _categoryTranslationKeys = {
+    'iliskiler': 'catRelationships',
+    'duygusal_destek': 'catCompassionateShadow',
+    'stil_danismanligi': 'catMyCloset',
+    'anksiyete': 'astrology',
+    'ruya_tabiri': 'dreamInterpretation',
+    'kendin_kesfet': 'catPersonaPsychology',
+    'bagimliliklar': 'catMyAddictions',
   };
 
-  
-  // Category Icons (Calming emojis)
+  static const Map<String, String> _descriptionTranslationKeys = {
+    'iliskiler': 'descRelationships',
+    'duygusal_destek': 'descCompassionateShadow',
+    'kendin_kesfet': 'descPersonaPsychology',
+    'anksiyete': 'descAstrologyDream',
+    'ruya_tabiri': 'dreamInterpretation',
+    'bagimliliklar': 'descMyAddictions',
+    'stil_danismanligi': 'descMyCloset',
+  };
+
+  static Map<String, String> get categoryNames => {
+        for (final entry in _categoryTranslationKeys.entries)
+          entry.key: AppTranslations.get(entry.value),
+      };
+
+  static Map<String, String> get categoryDescriptions => {
+        for (final entry in _descriptionTranslationKeys.entries)
+          entry.key: AppTranslations.get(entry.value),
+      };
+
   static const Map<String, String> categoryIcons = {
     'iliskiler': '💞',
     'duygusal_destek': '🌫️',
     'stil_danismanligi': '🧥',
     'anksiyete': '🌌',
+    'ruya_tabiri': '🌙',
     'kendin_kesfet': '🎭',
     'bagimliliklar': '🔗',
-    'motivasyon': '🗺️',
   };
-
-  
-  // Category Descriptions (for tooltips/details)
-  static const Map<String, String> categoryDescriptions = {
-    'iliskiler': 'Romantik bağlar ve stratejik ilişki yönetimi',
-    'duygusal_destek': 'Derin empati ve travma duyarlı destek',
-    'kendin_kesfet': 'Kahramanın Yolculuğu ve psikolojik derinlik',
-    'anksiyete': 'Doğum haritası ve rüya tabiri analizi',
-    'bagimliliklar': 'Dijital ve davranışsal bağımlılık yönetimi',
-    'stil_danismanligi': 'Kimlik ve arketip odaklı stil mimarlığı',
-    'motivasyon': 'Kariyer, dopamin ve gelecek stratejisti',
-  };
-
-
 }
 
 // =============================================================================

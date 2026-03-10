@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../config/app_theme.dart';
+import '../../l10n/app_translations.dart';
 import '../../models/forum_post.dart';
 import '../../services/forum_service.dart';
 import 'campfire_post_detail_screen.dart';
@@ -45,9 +46,9 @@ class _CampfireMyTabState extends State<CampfireMyTab> {
           children: [
             Icon(Icons.edit_note_rounded, size: 56, color: AppTheme.terracotta.withOpacity(0.5)),
             const SizedBox(height: 12),
-            Text('Henüz paylaşımın yok', style: TextStyle(fontSize: 15, color: AppTheme.mutedSage)),
+            Text(AppTranslations.get('noMyPosts'), style: TextStyle(fontSize: 15, color: AppTheme.mutedSage)),
             const SizedBox(height: 4),
-            Text('Paylaş sekmesinden ilk gönderini at', style: TextStyle(fontSize: 13, color: AppTheme.mutedSage)),
+            Text(AppTranslations.get('postFirstFromShare'), style: TextStyle(fontSize: 13, color: AppTheme.mutedSage)),
           ],
         ),
       );

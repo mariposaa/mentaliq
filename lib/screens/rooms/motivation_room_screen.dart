@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
+import '../../l10n/app_translations.dart';
 import 'tabs/motivation_chat_tab.dart';
 import 'tabs/motivation_goals_tab.dart';
 import 'tabs/motivation_habits_tab.dart';
@@ -19,11 +20,11 @@ class _MotivationRoomScreenState extends State<MotivationRoomScreen>
   late TabController _tabController;
 
   // Tab tanımları - 4 sekme (doğru sıralama)
-  final List<_TabInfo> _tabs = [
-    _TabInfo(label: 'Hedef', icon: Icons.flag_outlined),
-    _TabInfo(label: 'Yol Haritası', icon: Icons.map_outlined),
-    _TabInfo(label: 'Motivasyon', icon: Icons.bolt_rounded),
-    _TabInfo(label: 'Analiz', icon: Icons.insights_rounded),
+  late final List<_TabInfo> _tabs = [
+    _TabInfo(label: AppTranslations.get('goal'), icon: Icons.flag_outlined),
+    _TabInfo(label: AppTranslations.get('roadmap'), icon: Icons.map_outlined),
+    _TabInfo(label: AppTranslations.get('motivation'), icon: Icons.bolt_rounded),
+    _TabInfo(label: AppTranslations.get('analysis'), icon: Icons.insights_rounded),
   ];
 
   @override
@@ -96,13 +97,13 @@ class _MotivationRoomScreenState extends State<MotivationRoomScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Motivasyon & Kişisel Gelişim',
+                  AppTranslations.get('motivationPersonalDev'),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                 ),
                 Text(
-                  'Hedefler, alışkanlıklar ve büyüme',
+                  AppTranslations.get('goalsHabitsGrowth'),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppTheme.mutedSage,
                       ),

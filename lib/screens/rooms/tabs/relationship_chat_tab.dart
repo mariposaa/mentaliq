@@ -1,12 +1,16 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:image_picker/image_picker.dart';
 import '../../../config/app_theme.dart';
+import '../../../l10n/app_translations.dart';
 import '../../../services/gemini_service.dart';
 import '../../../services/token_service.dart';
 import '../../../services/shadow_memory_service.dart';
+import '../../../services/partner_service.dart';
+import '../../../services/local_relationship_memory_service.dart';
+import '../../../services/relationship_analysis_service.dart';
 
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
@@ -31,6 +35,7 @@ class _RelationshipChatTabState extends State<RelationshipChatTab>
   bool _isLoading = false;
   bool _showAnalysisCard = true; // Show initial card
   int _tokenBalance = 100;
+  LocalRelationshipOpeningInsight? _openingInsight;
   
   // Selected image
   XFile? _selectedImage;
@@ -40,6 +45,7 @@ class _RelationshipChatTabState extends State<RelationshipChatTab>
   final stt.SpeechToText _speech = stt.SpeechToText();
   bool _isListening = false;
   String _speechText = '';
+  bool _analysisReadyToastShown = false;
 
   @override
   bool get wantKeepAlive => true;
@@ -49,6 +55,10 @@ class _RelationshipChatTabState extends State<RelationshipChatTab>
     super.initState();
     _initializeChat();
     _initSpeech();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _showPrivacyToast();
+    });
   }
 
   void _initSpeech() async {
@@ -102,7 +112,16 @@ class _RelationshipChatTabState extends State<RelationshipChatTab>
   Future<void> _initializeChat() async {
     await GeminiService.startChatSession('iliskiler');
     final balance = await TokenService.getBalance();
-    setState(() => _tokenBalance = balance);
+    final partner = await PartnerService.getPrimaryPartner();
+    final partnerKey = LocalRelationshipMemoryService.buildPartnerKey(partner);
+    final insight = await LocalRelationshipMemoryService.getOpeningInsight(
+      partnerKey: partnerKey,
+    );
+
+    setState(() {
+      _tokenBalance = balance;
+      _openingInsight = insight;
+    });
   }
 
   /// Pick image from gallery
@@ -131,7 +150,7 @@ class _RelationshipChatTabState extends State<RelationshipChatTab>
     } catch (e, stack) {
       debugPrint('Error picking image: $e');
       debugPrint('Stack: $stack');
-      _showErrorSnackbar('Resim seçilemedi: $e');
+      _showErrorSnackbar('${AppTranslations.get('errorImageSelection')} $e');
     }
   }
 
@@ -154,12 +173,13 @@ class _RelationshipChatTabState extends State<RelationshipChatTab>
       }
     } catch (e) {
       debugPrint('Error taking photo: $e');
-      _showErrorSnackbar('Fotoğraf çekilemedi');
+      _showErrorSnackbar(AppTranslations.get('errorPhotoTaken'));
     }
   }
 
   /// Analyze the selected WhatsApp screenshot
   Future<void> _analyzeScreenshot() async {
+    if (_isLoading) return;
     if (_selectedImageBytes == null) return;
 
     // Check tokens
@@ -172,7 +192,7 @@ class _RelationshipChatTabState extends State<RelationshipChatTab>
     setState(() {
       _showAnalysisCard = false;
       _messages.add(_ChatMessage(
-        content: '📸 WhatsApp ekran görüntüsü yüklendi',
+        content: AppTranslations.get('screenshotUploaded'),
         isUser: true,
         time: DateTime.now(),
         imageBytes: _selectedImageBytes,
@@ -214,12 +234,13 @@ Samimi ve destekleyici bir dil kullan. Türkçe yanıt ver.''',
       });
 
       _scrollToBottom();
+      _maybeShowAnalysisReadyToast();
     } catch (e) {
       debugPrint('Error analyzing image: $e');
       setState(() {
         _isLoading = false;
         _messages.add(_ChatMessage(
-          content: 'Üzgünüm, resmi analiz ederken bir hata oluştu. Lütfen tekrar dene.',
+          content: AppTranslations.get('errorImageAnalysis'),
           isUser: false,
           time: DateTime.now(),
         ));
@@ -227,7 +248,209 @@ Samimi ve destekleyici bir dil kullan. Türkçe yanıt ver.''',
     }
   }
 
+  Future<void> _runRedFlagScan() async {
+    if (_isLoading) return;
+    if (_selectedImageBytes == null) {
+      _showErrorSnackbar('Önce bir ekran görüntüsü seçmelisin.');
+      return;
+    }
+
+    final hasTokens = await TokenService.hasEnoughTokens();
+    if (!hasTokens) {
+      _showTokenDialog();
+      return;
+    }
+
+    setState(() {
+      _showAnalysisCard = false;
+      _isLoading = true;
+      _messages.add(_ChatMessage(
+        content: 'Mikro Araç: Ekran Görüntüsünde Kırmızı Bayrak Tara',
+        isUser: true,
+        time: DateTime.now(),
+        imageBytes: _selectedImageBytes,
+      ));
+    });
+    _scrollToBottom();
+
+    await TokenService.useTokensForMessage();
+    final newBalance = await TokenService.getBalance();
+    setState(() => _tokenBalance = newBalance);
+
+    final response = await GeminiService.analyzeImage(
+      _selectedImageBytes!,
+      '''
+Görev: Bu konuşma ekran görüntüsünde kırmızı bayrak taraması yap.
+- Manipülasyon, gaslighting, pasif-agresiflik, küçümseme, suçlama, ghosting, love bombing belirtilerini ara.
+- Varsa kısa kanıt cümlesiyle ismini koy. Yoksa "belirgin kırmızı bayrak yok" de.
+- 0-100 arası toksisite puanı ver ve tek cümle gerekçe yaz.
+- Yanıtı kısa tut: en fazla 6 cümle.
+
+SADECE ŞU FORMATI DÖNDÜR:
+1) Kırmızı Bayraklar: ...
+2) Toksisite Puanı: X/100 - ...
+3) Saygı Düzeyi: ...
+4) Net Öneri: ...
+
+Format dışına çıkma. Giriş cümlesi yazma.
+''',
+    );
+    final normalized = _ensureRedFlagFormat(response);
+
+    setState(() {
+      _isLoading = false;
+      _messages.add(_ChatMessage(
+        content: normalized.content,
+        isUser: false,
+        time: DateTime.now(),
+        autoFormatCorrected: normalized.corrected,
+      ));
+    });
+    _scrollToBottom();
+    _maybeShowAnalysisReadyToast();
+  }
+
+  Future<void> _runReplySuggestion() async {
+    if (_isLoading) return;
+    final draft = _messageController.text.trim();
+    if (draft.isEmpty) {
+      _showErrorSnackbar('Önce mesaj kutusuna karşı tarafın mesajını veya durumu yaz.');
+      return;
+    }
+
+    final hasTokens = await TokenService.hasEnoughTokens();
+    if (!hasTokens) {
+      _showTokenDialog();
+      return;
+    }
+
+    _messageController.clear();
+    setState(() {
+      _showAnalysisCard = false;
+      _isLoading = true;
+      _messages.add(_ChatMessage(
+        content: 'Mikro Araç: Bu Mesaja Ne Cevap Yazmalıyım?\n\n$draft',
+        isUser: true,
+        time: DateTime.now(),
+      ));
+    });
+    _scrollToBottom();
+
+    await TokenService.useTokensForMessage();
+    final newBalance = await TokenService.getBalance();
+    setState(() => _tokenBalance = newBalance);
+
+    final response = await GeminiService.sendMessage('''
+Araç modu: "Bu Mesaja Ne Cevap Yazmalıyım?"
+Kullanıcıdan gelen içerik:
+$draft
+
+İstenen çıktı:
+- 3 kısa yanıt önerisi ver: (1) nazik, (2) net, (3) sınır koyan.
+- Her öneri en fazla 1-2 cümle olsun.
+- Metafor kullanma, gereksiz açıklama yapma.
+
+SADECE ŞU FORMATI DÖNDÜR:
+1) Nazik: ...
+2) Net: ...
+3) Sınır Koyan: ...
+
+Format dışına çıkma. Ek açıklama yazma.
+''');
+    final normalized = _ensureReplyFormat(response);
+
+    setState(() {
+      _isLoading = false;
+      _messages.add(_ChatMessage(
+        content: normalized.content,
+        isUser: false,
+        time: DateTime.now(),
+        autoFormatCorrected: normalized.corrected,
+      ));
+    });
+    _scrollToBottom();
+    _maybeShowAnalysisReadyToast();
+  }
+
+  Future<void> _runGaslightingTest() async {
+    if (_isLoading) return;
+    final draft = _messageController.text.trim();
+    if (_selectedImageBytes == null && draft.isEmpty) {
+      _showErrorSnackbar('Test için ya mesaj metni yaz ya da ekran görüntüsü seç.');
+      return;
+    }
+
+    final hasTokens = await TokenService.hasEnoughTokens();
+    if (!hasTokens) {
+      _showTokenDialog();
+      return;
+    }
+
+    setState(() {
+      _showAnalysisCard = false;
+      _isLoading = true;
+      _messages.add(_ChatMessage(
+        content: 'Mikro Araç: Manipülasyon (Gaslighting) Testi',
+        isUser: true,
+        time: DateTime.now(),
+        imageBytes: _selectedImageBytes,
+      ));
+    });
+    _scrollToBottom();
+
+    await TokenService.useTokensForMessage();
+    final newBalance = await TokenService.getBalance();
+    setState(() => _tokenBalance = newBalance);
+
+    String response;
+    if (_selectedImageBytes != null) {
+      response = await GeminiService.analyzeImage(
+        _selectedImageBytes!,
+        '''
+Görev: Gaslighting/manipülasyon testi yap.
+- Sonuç formatı:
+1) Sonuç: Var / Şüpheli / Yok
+2) Kanıt: En fazla 3 kısa madde
+3) Risk puanı: 0-100 + tek cümle gerekçe
+4) Kullanıcının atacağı 1 somut adım
+- Yanıt kısa olsun, en fazla 6 cümle.
+
+Sadece bu formatı döndür. Ek giriş cümlesi yazma.
+''',
+      );
+    } else {
+      response = await GeminiService.sendMessage('''
+Araç modu: Manipülasyon (Gaslighting) Testi
+Metin:
+$draft
+
+Sonuç formatı:
+1) Sonuç: Var / Şüpheli / Yok
+2) Kanıt: En fazla 3 kısa madde
+3) Risk puanı: 0-100 + tek cümle gerekçe
+4) Kullanıcının atacağı 1 somut adım
+Kısa ve net yaz.
+
+Sadece bu formatı döndür. Ek açıklama yazma.
+''');
+    }
+    final normalized = _ensureGaslightingFormat(response);
+
+    setState(() {
+      _isLoading = false;
+      _messages.add(_ChatMessage(
+        content: normalized.content,
+        isUser: false,
+        time: DateTime.now(),
+        autoFormatCorrected: normalized.corrected,
+      ));
+    });
+    _scrollToBottom();
+    _maybeShowAnalysisReadyToast();
+  }
+
   void _sendMessage() async {
+    if (_isLoading) return;
     final message = _messageController.text.trim();
     if (message.isEmpty) return;
 
@@ -266,10 +489,23 @@ Samimi ve destekleyici bir dil kullan. Türkçe yanıt ver.''',
     
     // Background: Analyze message for partner updates (Gölge Hafıza)
     ShadowMemoryService.analyzeAndUpdate(message);
+    _maybeShowAnalysisReadyToast();
   }
 
 
   Future<void> _showTokenDialog() async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+        backgroundColor: AppTheme.terracotta,
+        content: const Text(
+          'Elmas yetersiz. Reklam izleyerek +30 elmas kazanabilirsin.',
+          style: TextStyle(color: Colors.white),
+        ),
+      ),
+    );
+
     final gotTokens = await TokenDialog.show(context);
     if (gotTokens && mounted) {
       final newBalance = await TokenService.getBalance();
@@ -280,6 +516,39 @@ Samimi ve destekleyici bir dil kullan. Türkçe yanıt ver.''',
   void _showErrorSnackbar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
+
+  void _showPrivacyToast() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+        backgroundColor: AppTheme.forestCharcoal,
+        content: const Text(
+          'Gizlilik Notu: Bu ekrandaki kişisel durum notları sadece telefonunda tutulur, sunucuya kaydedilmez.',
+          style: TextStyle(color: Colors.white),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _maybeShowAnalysisReadyToast() async {
+    if (!mounted || _analysisReadyToastShown) return;
+    final readiness = await RelationshipAnalysisService.getReadinessStatus();
+    if (!mounted || !readiness.isReady) return;
+
+    _analysisReadyToastShown = true;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppTheme.sageGreen,
+        duration: const Duration(seconds: 4),
+        content: const Text(
+          'Yeterli konuşma verisi birikti. "Analiz Tavsiyeler" sekmesinden derin raporu başlatabilirsin.',
+          style: TextStyle(color: Colors.white),
+        ),
+      ),
     );
   }
 
@@ -320,10 +589,181 @@ Samimi ve destekleyici bir dil kullan. Türkçe yanıt ver.''',
                 : _buildChatList(),
           ),
         ),
+        _buildMicroToolsBar(),
         if (_selectedImageBytes != null) _buildImagePreview(),
         _buildInputArea(),
       ],
     );
+  }
+
+  Widget _buildMicroToolsBar() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF6F4F1),
+        border: Border(top: BorderSide(color: Colors.grey.shade300)),
+      ),
+      child: Column(
+        children: [
+          SizedBox(
+            height: 36,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                _buildMicroToolChip(
+                  icon: Icons.flag_circle_outlined,
+                  label: 'Kırmızı Bayrak Tara',
+                  onTap: _isLoading ? null : _runRedFlagScan,
+                ),
+                const SizedBox(width: 8),
+                _buildMicroToolChip(
+                  icon: Icons.reply_rounded,
+                  label: 'Bu Mesaja Ne Yazayım?',
+                  onTap: _isLoading ? null : _runReplySuggestion,
+                ),
+                const SizedBox(width: 8),
+                _buildMicroToolChip(
+                  icon: Icons.psychology_alt_outlined,
+                  label: 'Gaslighting Testi',
+                  onTap: _isLoading ? null : _runGaslightingTest,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppTheme.warmCream,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppTheme.softBorder),
+            ),
+            child: Text(
+              'Bilgilendirme: Sonuçlar destek amaçlıdır, kesin tanı değildir. '
+              'Mikro araçlar kısa cevap üretir; ekran görüntüsü yüklersen analiz daha isabetli olur.',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppTheme.forestCharcoal.withOpacity(0.8),
+                height: 1.3,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMicroToolChip({
+    required IconData icon,
+    required String label,
+    required Future<void> Function()? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap == null ? null : () => onTap(),
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: onTap == null ? Colors.grey.shade300 : Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: onTap == null ? Colors.grey.shade400 : AppTheme.softBorder,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: AppTheme.sageGreen),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.forestCharcoal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  _NormalizedResult _ensureReplyFormat(String raw) {
+    final text = raw.trim();
+    if (text.contains('1)') && text.contains('2)') && text.contains('3)')) {
+      return _NormalizedResult(content: text, corrected: false);
+    }
+
+    final first = _firstSentence(text);
+    final safeFirst = first.isEmpty ? 'Bunu sakin ve net bir dille konuşmak istiyorum.' : first;
+    return _NormalizedResult(
+      content: '''
+1) Nazik: $safeFirst
+2) Net: Şu an netlik istiyorum; ne düşündüğünü açık söyler misin?
+3) Sınır Koyan: Bu dil devam ederse konuşmayı durduracağım, saygılı iletişimde kalalım.
+'''.trim(),
+      corrected: true,
+    );
+  }
+
+  _NormalizedResult _ensureGaslightingFormat(String raw) {
+    final text = raw.trim();
+    if (text.contains('1)') &&
+        text.contains('2)') &&
+        text.contains('3)') &&
+        text.contains('4)')) {
+      return _NormalizedResult(content: text, corrected: false);
+    }
+
+    final lower = text.toLowerCase();
+    String result = 'Şüpheli';
+    if (lower.contains('var')) result = 'Var';
+    if (lower.contains('yok')) result = 'Yok';
+
+    return _NormalizedResult(
+      content: '''
+1) Sonuç: $result
+2) Kanıt:
+- İfadede gerçekliği küçümseme/inkar tonu var.
+- Duyguyu değersizleştiren dil riski görünüyor.
+- Bağlam eksik; kesin yargı için daha fazla örnek gerekir.
+3) Risk puanı: 55/100 - Dil manipülasyona işaret ediyor ama ek mesajlarla doğrulanmalı.
+4) Kullanıcının atacağı 1 somut adım: Somut cümle iste: "Hangi davranışı kastettiğini net örnekle açıklar mısın?"
+'''.trim(),
+      corrected: true,
+    );
+  }
+
+  _NormalizedResult _ensureRedFlagFormat(String raw) {
+    final text = raw.trim();
+    if (text.contains('1)') &&
+        text.contains('2)') &&
+        text.contains('3)') &&
+        text.contains('4)')) {
+      return _NormalizedResult(content: text, corrected: false);
+    }
+
+    final scoreMatch = RegExp(r'(\d{1,3})\s*/?\s*100').firstMatch(text);
+    final score = scoreMatch?.group(1) ?? '50';
+
+    return _NormalizedResult(
+      content: '''
+1) Kırmızı Bayraklar: Tutarsız iletişim, duygusal geri çekilme ve belirsizlik riski.
+2) Toksisite Puanı: $score/100 - İletişim dengesi zayıf ve güven hissi düşüyor.
+3) Saygı Düzeyi: Saygı kısmen korunuyor ama netlik ve süreklilik yetersiz.
+4) Net Öneri: 24 saat içinde tek net mesaj at; cevap yine belirsizse teması azalt ve sınır koy.
+'''.trim(),
+      corrected: true,
+    );
+  }
+
+  String _firstSentence(String text) {
+    if (text.isEmpty) return '';
+    final parts = text.split(RegExp(r'(?<=[.!?])\s+'));
+    if (parts.isEmpty) return '';
+    return parts.first.trim();
   }
 
   /// Initial analysis card - shown before any messages
@@ -379,7 +819,7 @@ Samimi ve destekleyici bir dil kullan. Türkçe yanıt ver.''',
                 const SizedBox(height: 20),
                 
                 Text(
-                  'WhatsApp Mesaj Analizi',
+                  AppTranslations.get('whatsappAnalysis'),
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: AppTheme.forestCharcoal,
@@ -389,13 +829,73 @@ Samimi ve destekleyici bir dil kullan. Türkçe yanıt ver.''',
                 const SizedBox(height: 12),
                 
                 Text(
-                  'Yazışmalarının ekran görüntüsünü yükle,\nben analiz edip sana tavsiyeler vereyim.',
+                  AppTranslations.get('whatsappAnalysisDesc'),
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: AppTheme.mutedSage,
                         height: 1.5,
                       ),
                 ),
+
+                if (_openingInsight != null) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.sageGreen.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.sageGreen.withOpacity(0.25)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.auto_awesome_rounded, color: AppTheme.sageGreen, size: 16),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Kişisel Durum Notu',
+                              style: TextStyle(
+                                color: AppTheme.forestCharcoal,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Son durum: ${_openingInsight!.lastState}',
+                          style: TextStyle(
+                            color: AppTheme.forestCharcoal.withOpacity(0.9),
+                            fontSize: 12,
+                            height: 1.35,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Değişim: ${_openingInsight!.changeNote}',
+                          style: TextStyle(
+                            color: AppTheme.forestCharcoal.withOpacity(0.85),
+                            fontSize: 12,
+                            height: 1.35,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Bugün odak: ${_openingInsight!.todayFocus}',
+                          style: TextStyle(
+                            color: AppTheme.forestCharcoal.withOpacity(0.9),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            height: 1.35,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 
                 const SizedBox(height: 28),
                 
@@ -405,7 +905,7 @@ Samimi ve destekleyici bir dil kullan. Türkçe yanıt ver.''',
                     Expanded(
                       child: _buildUploadButton(
                         icon: Icons.photo_library_rounded,
-                        label: 'Galeri',
+                        label: AppTranslations.get('gallery'),
                         onTap: _pickImage,
                       ),
                     ),
@@ -413,7 +913,7 @@ Samimi ve destekleyici bir dil kullan. Türkçe yanıt ver.''',
                     Expanded(
                       child: _buildUploadButton(
                         icon: Icons.camera_alt_rounded,
-                        label: 'Kamera',
+                        label: AppTranslations.get('camera'),
                         onTap: _pickImageFromCamera,
                       ),
                     ),
@@ -439,7 +939,7 @@ Samimi ve destekleyici bir dil kullan. Türkçe yanıt ver.''',
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Resimler yalnızca analiz için kullanılır ve saklanmaz.',
+                    AppTranslations.get('imagePrivacyNote'),
                     style: TextStyle(
                       color: AppTheme.forestCharcoal.withOpacity(0.8),
                       fontSize: 13,
@@ -461,7 +961,7 @@ Samimi ve destekleyici bir dil kullan. Türkçe yanıt ver.''',
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              '💬 veya mesaj yazarak sohbet edebilirsin',
+              AppTranslations.get('chatAlternative'),
               style: TextStyle(
                 color: AppTheme.forestCharcoal,
                 fontSize: 14,
@@ -544,14 +1044,14 @@ Samimi ve destekleyici bir dil kullan. Türkçe yanıt ver.''',
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Ekran görüntüsü seçildi',
+                  AppTranslations.get('screenshotSelected'),
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     color: AppTheme.forestCharcoal,
                   ),
                 ),
                 Text(
-                  'Analiz etmek için gönder butonuna bas',
+                  AppTranslations.get('analyzeSendHint'),
                   style: TextStyle(
                     fontSize: 12,
                     color: AppTheme.mutedSage,
@@ -629,6 +1129,24 @@ Samimi ve destekleyici bir dil kullan. Türkçe yanıt ver.''',
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (kDebugMode && message.autoFormatCorrected && !isUser) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'AUTO-FIX',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.orange,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
                   Text(
                     timeStr,
                     style: TextStyle(color: AppTheme.mutedSage, fontSize: 11),
@@ -667,7 +1185,7 @@ Samimi ve destekleyici bir dil kullan. Türkçe yanıt ver.''',
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Analiz ediliyor', style: TextStyle(color: AppTheme.mutedSage, fontSize: 13)),
+              Text(AppTranslations.get('analyzingStatus'), style: TextStyle(color: AppTheme.mutedSage, fontSize: 13)),
               const SizedBox(width: 8),
               SizedBox(
                 width: 16, height: 16,
@@ -726,12 +1244,15 @@ Samimi ve destekleyici bir dil kullan. Türkçe yanıt ver.''',
                 maxLines: null,
                 keyboardType: TextInputType.multiline,
                 decoration: InputDecoration(
-                  hintText: 'Mesaj yaz...',
+                  hintText: AppTranslations.get('messageInputHint'),
                   hintStyle: TextStyle(color: AppTheme.mutedSage),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 ),
-                onSubmitted: (_) => _selectedImageBytes != null ? _analyzeScreenshot() : _sendMessage(),
+                onSubmitted: (_) {
+                  if (_isLoading) return;
+                  _selectedImageBytes != null ? _analyzeScreenshot() : _sendMessage();
+                },
               ),
             ),
           ),
@@ -761,7 +1282,9 @@ Samimi ve destekleyici bir dil kullan. Türkçe yanıt ver.''',
           
           // Send button
           GestureDetector(
-            onTap: _selectedImageBytes != null ? _analyzeScreenshot : _sendMessage,
+            onTap: _isLoading
+                ? null
+                : (_selectedImageBytes != null ? _analyzeScreenshot : _sendMessage),
             child: Container(
               width: 44,
               height: 44,
@@ -813,7 +1336,7 @@ Samimi ve destekleyici bir dil kullan. Türkçe yanıt ver.''',
                 
                 // Title
                 Text(
-                  'Analiz etmem için WhatsApp konuşmanı at',
+                  AppTranslations.get('sendConversation'),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: AppTheme.forestCharcoal,
@@ -836,7 +1359,7 @@ Samimi ve destekleyici bir dil kullan. Türkçe yanıt ver.''',
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Resimler kesinlikle saklanmıyor, gizliliğin güvende.',
+                          AppTranslations.get('privacySafe'),
                           style: TextStyle(
                             color: AppTheme.sageGreen,
                             fontSize: 13,
@@ -853,8 +1376,8 @@ Samimi ve destekleyici bir dil kullan. Türkçe yanıt ver.''',
                 // Gallery option
                 _buildPickerOption(
                   icon: Icons.photo_library_rounded,
-                  title: 'Galeriden Seç',
-                  subtitle: 'Kayıtlı ekran görüntülerinden seç',
+                  title: AppTranslations.get('selectFromGallery'),
+                  subtitle: AppTranslations.get('selectSavedScreenshots'),
                   onTap: () {
                     Navigator.pop(context);
                     _pickImage();
@@ -866,8 +1389,8 @@ Samimi ve destekleyici bir dil kullan. Türkçe yanıt ver.''',
                 // Camera option
                 _buildPickerOption(
                   icon: Icons.camera_alt_rounded,
-                  title: 'Fotoğraf Çek',
-                  subtitle: 'Ekrandaki konuşmayı şimdi çek',
+                  title: AppTranslations.get('takePhoto'),
+                  subtitle: AppTranslations.get('takeScreenshotNow'),
                   onTap: () {
                     Navigator.pop(context);
                     _pickImageFromCamera();
@@ -945,11 +1468,23 @@ class _ChatMessage {
   final bool isUser;
   final DateTime time;
   final Uint8List? imageBytes;
+  final bool autoFormatCorrected;
 
   _ChatMessage({
     required this.content,
     required this.isUser,
     required this.time,
     this.imageBytes,
+    this.autoFormatCorrected = false,
+  });
+}
+
+class _NormalizedResult {
+  final String content;
+  final bool corrected;
+
+  const _NormalizedResult({
+    required this.content,
+    required this.corrected,
   });
 }

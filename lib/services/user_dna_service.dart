@@ -5,12 +5,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../config/locale_utils.dart';
 import '../models/user_dna_model.dart';
+import 'memory_trigger_config_service.dart';
 import 'auth_service.dart';
 
 /// UserDNA - Kullanıcının dijital kimliği
 /// Tüm kategorilerde erişilebilir merkezi profil
 class UserDNAService {
   static UserDNAModel? _cachedDNA;
+  static final Map<String, DateTime> _memoryCooldown = {};
+  static const Duration _memoryCooldownWindow = Duration(minutes: 20);
 
   /// Get cached DNA
   static UserDNAModel? get currentDNA => _cachedDNA;
@@ -68,6 +71,22 @@ class UserDNAService {
       return true;
     } catch (e) {
       debugPrint('UserDNAService: Error updating DNA: $e');
+      try {
+        final uid = AuthService.userId;
+        if (uid != null) {
+          await AuthService.firestore
+              .collection('users')
+              .doc(uid)
+              .collection('user_data')
+              .doc('dna')
+              .set(updates.toFirestore(), SetOptions(merge: true));
+          _cachedDNA = (_cachedDNA ?? UserDNAModel()).merge(updates);
+          debugPrint('UserDNAService: Fallback DNA update succeeded');
+          return true;
+        }
+      } catch (fallbackError) {
+        debugPrint('UserDNAService: Fallback DNA update failed: $fallbackError');
+      }
       return false;
     }
   }
@@ -149,6 +168,92 @@ class UserDNAService {
     }
   }
 
+  /// Trigger-aware context builder.
+  /// - No trigger: returns short/light context
+  /// - Trigger detected: returns selected deep context with cooldown
+  static Future<String> getContextForMessage({
+    required String message,
+    required String category,
+  }) async {
+    try {
+      final dna = _cachedDNA ?? await getDNA();
+      if (dna == null) return '';
+
+      final triggers = await _classifyMessageTriggers(message, category);
+      if (triggers.isEmpty) {
+        return _buildLightContext(dna);
+      }
+
+      final selected = <String>[];
+      final lowerCategory = category.toLowerCase();
+      final now = DateTime.now();
+
+      if ((triggers.contains('identity') || triggers.contains('explicit')) &&
+          !_isCooling('identity', now)) {
+        final identity = _buildIdentitySignal(dna);
+        if (identity.isNotEmpty) {
+          selected.add(identity);
+          _markUsed('identity', now);
+        }
+      }
+
+      if ((triggers.contains('relationship') ||
+              lowerCategory == 'iliskiler' ||
+              triggers.contains('explicit')) &&
+          !_isCooling('relationship', now)) {
+        final relationship = _pickSignal(
+          tag: 'ILISKI DESENI',
+          values: [
+            ...?dna.fears,
+            ...?dna.triggers,
+            ...?dna.coreValues,
+          ],
+          maxItems: 2,
+        );
+        if (relationship.isNotEmpty) {
+          selected.add(relationship);
+          _markUsed('relationship', now);
+        }
+      }
+
+      if ((triggers.contains('addiction') ||
+              lowerCategory == 'bagimliliklar' ||
+              triggers.contains('explicit')) &&
+          !_isCooling('addiction', now)) {
+        final addiction = _buildAddictionSignal(dna);
+        if (addiction.isNotEmpty) {
+          selected.add(addiction);
+          _markUsed('addiction', now);
+        }
+      }
+
+      if ((triggers.contains('crisis') || triggers.contains('selfworth')) &&
+          !_isCooling('emotional', now)) {
+        final emotional = _pickSignal(
+          tag: 'DUYGUSAL TETIK',
+          values: [...?dna.traumas, ...?dna.triggers, ...?dna.fears],
+          maxItems: 2,
+        );
+        if (emotional.isNotEmpty) {
+          selected.add(emotional);
+          _markUsed('emotional', now);
+        }
+      }
+
+      if (selected.isEmpty) {
+        return _buildLightContext(dna);
+      }
+
+      return '''
+### TETIK ODAKLI BAGLAM (SADECE GEREKTIGINDE KULLAN):
+${selected.take(4).join('\n')}
+''';
+    } catch (e) {
+      debugPrint('UserDNAService: Error building trigger context: $e');
+      return '';
+    }
+  }
+
   /// Parse updates from shadow analysis JSON
   static UserDNAModel? parseUpdatesFromJson(Map<String, dynamic>? json) {
     if (json == null) return null;
@@ -208,6 +313,7 @@ class UserDNAService {
   /// Clear cache (for logout)
   static void clearCache() {
     _cachedDNA = null;
+    _memoryCooldown.clear();
   }
 
   /// Initialize DNA on app start; dil yoksa cihaz dilini UserDNA'ya yazar.
@@ -220,5 +326,96 @@ class UserDNAService {
       debugPrint('UserDNAService: Language set from device: $code');
     }
     debugPrint('UserDNAService: Initialized with DNA: ${_cachedDNA?.toPromptContext()}');
+  }
+
+  static bool _isCooling(String key, DateTime now) {
+    final last = _memoryCooldown[key];
+    if (last == null) return false;
+    return now.difference(last) < _memoryCooldownWindow;
+  }
+
+  static void _markUsed(String key, DateTime now) {
+    _memoryCooldown[key] = now;
+  }
+
+  static Future<Set<String>> _classifyMessageTriggers(
+    String message,
+    String category,
+  ) async {
+    final text = message.toLowerCase();
+    final tags = <String>{};
+    final cfg = await MemoryTriggerConfigService.getConfig();
+
+    bool hasAny(List<String> words) =>
+        words.any((w) => w.isNotEmpty && text.contains(w.toLowerCase()));
+
+    if (hasAny(cfg.crisis)) {
+      tags.add('crisis');
+    }
+
+    if (hasAny(cfg.relationship)) {
+      tags.add('relationship');
+    }
+
+    if (hasAny(cfg.addiction)) {
+      tags.add('addiction');
+    }
+
+    if (hasAny(cfg.selfworth)) {
+      tags.add('selfworth');
+      tags.add('identity');
+    }
+
+    if (hasAny(cfg.explicit)) {
+      tags.add('explicit');
+    }
+
+    final c = category.toLowerCase();
+    if (c == 'iliskiler' || c == 'bagimliliklar') {
+      tags.add('identity');
+    }
+
+    return tags;
+  }
+
+  static String _buildLightContext(UserDNAModel dna) {
+    final base = <String>[];
+    if (dna.age != null) base.add('${dna.age} yas');
+    if (dna.zodiac != null && dna.zodiac!.isNotEmpty) base.add('${dna.zodiac} burcu');
+    if (dna.profession != null && dna.profession!.isNotEmpty) {
+      base.add('Meslek: ${dna.profession}');
+    }
+    if (base.isEmpty) return '';
+    return '### HAFIF BAGLAM:\n- ${base.join(' | ')}';
+  }
+
+  static String _buildIdentitySignal(UserDNAModel dna) {
+    final values = <String>[];
+    if (dna.mbti != null && dna.mbti!.isNotEmpty) values.add('MBTI: ${dna.mbti}');
+    if (dna.lifeStage != null && dna.lifeStage!.isNotEmpty) {
+      values.add('Yasam evresi: ${dna.lifeStage}');
+    }
+    if (dna.coreValues != null && dna.coreValues!.isNotEmpty) {
+      values.add('Deger: ${dna.coreValues!.take(1).join(", ")}');
+    }
+    if (values.isEmpty) return '';
+    return '[KIMLIK ODAK] ${values.join(' | ')}';
+  }
+
+  static String _buildAddictionSignal(UserDNAModel dna) {
+    final addictions = dna.activeAddictions;
+    if (addictions == null || addictions.isEmpty) return '';
+    final top = addictions.first;
+    return '[BAGIMLILIK RISK] ${top.id}: irade ${top.willpowerIndex.toStringAsFixed(2)}, temiz gun ${top.streakDays}';
+  }
+
+  static String _pickSignal({
+    required String tag,
+    required List<String> values,
+    int maxItems = 2,
+  }) {
+    final cleaned = values.map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    if (cleaned.isEmpty) return '';
+    return '[$tag] ${cleaned.take(maxItems).join(', ')}';
   }
 }

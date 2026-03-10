@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
+import '../../l10n/app_translations.dart';
 import '../../services/forum_service.dart';
 
 /// 18+ tek seferlik onay; sadece onaylarsa Kamp Ateşi açılır.
@@ -20,9 +21,9 @@ class CampfireAgeGate extends StatelessWidget {
             children: [
               Icon(Icons.local_fire_department_rounded, size: 72, color: AppTheme.terracotta.withOpacity(0.8)),
               const SizedBox(height: 24),
-              Text('Kamp Ateşi', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: AppTheme.terracotta)),
+              Text(AppTranslations.get('campfire'), style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: AppTheme.terracotta)),
               const SizedBox(height: 12),
-              Text('Bu alan 18 yaş ve üzeri kullanıcılar içindir. Devam etmek için yaşınızı onaylayın.', textAlign: TextAlign.center, style: TextStyle(fontSize: 15, color: AppTheme.forestCharcoal)),
+              Text(AppTranslations.get('ageGateMessage'), textAlign: TextAlign.center, style: TextStyle(fontSize: 15, color: AppTheme.forestCharcoal)),
               const SizedBox(height: 32),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -30,7 +31,7 @@ class CampfireAgeGate extends StatelessWidget {
                   OutlinedButton(
                     onPressed: () => Navigator.of(context).maybePop(),
                     style: OutlinedButton.styleFrom(foregroundColor: AppTheme.forestCharcoal, side: BorderSide(color: AppTheme.softBorder)),
-                    child: const Text('Hayır'),
+                    child: Text(AppTranslations.get('no')),
                   ),
                   const SizedBox(width: 16),
                   FilledButton(
@@ -39,7 +40,7 @@ class CampfireAgeGate extends StatelessWidget {
                       onConfirmed();
                     },
                     style: FilledButton.styleFrom(backgroundColor: AppTheme.terracotta),
-                    child: const Text('18 yaşındayım'),
+                    child: Text(AppTranslations.get('confirmAge')),
                   ),
                 ],
               ),

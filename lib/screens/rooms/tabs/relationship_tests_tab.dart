@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
+import '../../../l10n/app_translations.dart';
 import '../../../models/partner_model.dart';
 import '../../../services/partner_service.dart';
 import '../../../services/answer_mode_service.dart';
@@ -97,7 +98,7 @@ class _RelationshipTestsTabState extends State<RelationshipTestsTab>
   Future<void> _savePartner() async {
     if (_nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Partner adı gerekli'), backgroundColor: Colors.red),
+        SnackBar(content: Text(AppTranslations.get('errorPartnerName')), backgroundColor: Colors.red),
       );
       return;
     }
@@ -124,7 +125,7 @@ class _RelationshipTestsTabState extends State<RelationshipTestsTab>
         debugPrint('Failed to create partner');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Partner kaydedilemedi'), backgroundColor: Colors.red),
+            SnackBar(content: Text(AppTranslations.get('errorPartnerSave')), backgroundColor: Colors.red),
           );
         }
         setState(() => _isLoading = false);
@@ -153,7 +154,7 @@ class _RelationshipTestsTabState extends State<RelationshipTestsTab>
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Partner bilgileri kaydedildi ✓'),
+          content: Text(AppTranslations.get('partnerSaved')),
           backgroundColor: AppTheme.sageGreen,
         ),
       );
@@ -229,14 +230,14 @@ class _RelationshipTestsTabState extends State<RelationshipTestsTab>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Cevaplarım',
+                      AppTranslations.get('myAnswers'),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: AppTheme.forestCharcoal,
                           ),
                     ),
                     Text(
-                      'Dostum, sana hangi modda yardımcı olmamı istersin?',
+                      AppTranslations.get('answerModeQuestion'),
                       style: TextStyle(
                         color: AppTheme.mutedSage,
                         fontSize: 13,
@@ -254,8 +255,8 @@ class _RelationshipTestsTabState extends State<RelationshipTestsTab>
           _buildModeOption(
             mode: AnswerMode.comfort,
             emoji: '🤗',
-            title: 'Beni Teselli Et',
-            subtitle: 'İyimser ve destekleyici',
+            title: AppTranslations.get('comfortMode'),
+            subtitle: AppTranslations.get('comfortModeDesc'),
             color: const Color(0xFF4CAF50),
           ),
           
@@ -264,8 +265,8 @@ class _RelationshipTestsTabState extends State<RelationshipTestsTab>
           _buildModeOption(
             mode: AnswerMode.realistic,
             emoji: '🎯',
-            title: 'Gerçekçi Ol',
-            subtitle: 'Objektif ve dengeli',
+            title: AppTranslations.get('realisticMode'),
+            subtitle: AppTranslations.get('realisticModeDesc'),
             color: const Color(0xFF2196F3),
           ),
           
@@ -274,8 +275,8 @@ class _RelationshipTestsTabState extends State<RelationshipTestsTab>
           _buildModeOption(
             mode: AnswerMode.harsh,
             emoji: '🔥',
-            title: 'Ağzının Payını Ver',
-            subtitle: 'Acımasız ve dobra',
+            title: AppTranslations.get('harshMode'),
+            subtitle: AppTranslations.get('harshModeDesc'),
             color: const Color(0xFFE91E63),
           ),
         ],
@@ -447,7 +448,7 @@ class _RelationshipTestsTabState extends State<RelationshipTestsTab>
             const SizedBox(height: 12),
             
             Text(
-              'Düzenlemek için dokun',
+              AppTranslations.get('tapToEdit'),
               style: TextStyle(
                 color: AppTheme.sageGreen,
                 fontSize: 12,
@@ -512,7 +513,7 @@ class _RelationshipTestsTabState extends State<RelationshipTestsTab>
             ),
             const SizedBox(height: 16),
             Text(
-              'Partner Ekle',
+              AppTranslations.get('addPartner'),
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: AppTheme.forestCharcoal,
@@ -520,7 +521,7 @@ class _RelationshipTestsTabState extends State<RelationshipTestsTab>
             ),
             const SizedBox(height: 8),
             Text(
-              'Partnerinin bilgilerini ekle\nAI sana özel tavsiyeler versin',
+              AppTranslations.get('addPartnerDesc'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: AppTheme.mutedSage,
@@ -547,13 +548,13 @@ class _RelationshipTestsTabState extends State<RelationshipTestsTab>
           },
         ),
         title: Text(
-          _partner == null ? 'Yeni Partner' : 'Partner Düzenle',
+          _partner == null ? AppTranslations.get('newPartner') : AppTranslations.get('editPartner'),
           style: TextStyle(color: AppTheme.forestCharcoal),
         ),
         actions: [
           TextButton(
             onPressed: _savePartner,
-            child: Text('Kaydet', style: TextStyle(color: AppTheme.sageGreen, fontWeight: FontWeight.bold)),
+            child: Text(AppTranslations.get('save'), style: TextStyle(color: AppTheme.sageGreen, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -570,8 +571,8 @@ class _RelationshipTestsTabState extends State<RelationshipTestsTab>
             children: [
               _buildTextField(
                 controller: _nameController,
-                label: 'İsim *',
-                hint: 'Partnerinize bir isim takın',
+                label: AppTranslations.get('nameLabel'),
+                hint: AppTranslations.get('nameHint'),
                 icon: Icons.person_outline_rounded,
               ),
               const SizedBox(height: 16),
@@ -581,8 +582,8 @@ class _RelationshipTestsTabState extends State<RelationshipTestsTab>
                     child: _buildDropdown(
                       value: _selectedRelationType,
                       items: _relationTypes,
-                      label: 'İlişki Türü',
-                      hint: 'Seç',
+                      label: AppTranslations.get('relationshipType'),
+                      hint: AppTranslations.get('selectHint'),
                       onChanged: (v) => setState(() => _selectedRelationType = v),
                     ),
                   ),
@@ -591,8 +592,8 @@ class _RelationshipTestsTabState extends State<RelationshipTestsTab>
                     child: _buildDropdown(
                       value: _selectedGender,
                       items: _genders,
-                      label: 'Cinsiyet',
-                      hint: 'Seç',
+                      label: AppTranslations.get('gender'),
+                      hint: AppTranslations.get('selectHint'),
                       onChanged: (v) => setState(() => _selectedGender = v),
                     ),
                   ),
@@ -604,7 +605,7 @@ class _RelationshipTestsTabState extends State<RelationshipTestsTab>
                   Expanded(
                     child: _buildTextField(
                       controller: _ageController,
-                      label: 'Yaş',
+                      label: AppTranslations.get('age'),
                       hint: '25',
                       icon: Icons.cake_outlined,
                       keyboardType: TextInputType.number,
@@ -615,8 +616,8 @@ class _RelationshipTestsTabState extends State<RelationshipTestsTab>
                     child: _buildDropdown(
                       value: _selectedZodiac,
                       items: _zodiacs,
-                      label: 'Burç',
-                      hint: 'Seç',
+                      label: AppTranslations.get('zodiacSign'),
+                      hint: AppTranslations.get('selectHint'),
                       onChanged: (v) => setState(() => _selectedZodiac = v),
                     ),
                   ),
@@ -626,23 +627,23 @@ class _RelationshipTestsTabState extends State<RelationshipTestsTab>
               _buildDropdown(
                 value: _selectedLoveLanguage,
                 items: _loveLanguages,
-                label: 'Sevgi Dili',
-                hint: 'Nasıl sevgi gösterir?',
+                label: AppTranslations.get('loveLanguage'),
+                hint: AppTranslations.get('loveLangHint'),
                 onChanged: (v) => setState(() => _selectedLoveLanguage = v),
               ),
               const SizedBox(height: 16),
               _buildDropdown(
                 value: _selectedCommunicationStyle,
                 items: _communicationStyles,
-                label: 'İletişim Tarzı',
-                hint: 'Tartışmalarda nasıl davranır?',
+                label: AppTranslations.get('commStyleLabel'),
+                hint: AppTranslations.get('commStyleHint'),
                 onChanged: (v) => setState(() => _selectedCommunicationStyle = v),
               ),
               const SizedBox(height: 16),
               _buildTextField(
                 controller: _notesController,
-                label: 'Ekstra Notlar',
-                hint: 'Bilmem gerekenler...',
+                label: AppTranslations.get('extraNotes'),
+                hint: AppTranslations.get('extraNotesHint'),
                 icon: Icons.notes_rounded,
                 maxLines: 3,
               ),

@@ -27,9 +27,11 @@ class HoroscopeService {
     lastError = null;
     debugPrint('HoroscopeService: getHoroscope called for $birthDate, $birthTime, $birthLocation (Weekly: $isWeekly)');
     final now = DateTime.now();
-    final dateKey = isWeekly 
+    final dateKeyBase = isWeekly
         ? 'week_${now.year}_${_getWeekNumber(now)}'
         : DateFormat('yyyy-MM-dd').format(now);
+    // Cache schema version to invalidate previously inconsistent sign outputs.
+    final dateKey = '${dateKeyBase}_v2';
     final period = isWeekly ? 'weekly' : 'daily';
     
     // We cache by a hash of birth info to serve specific users correctly
@@ -92,11 +94,19 @@ ${AppLocale.languageInstructionForAI}
 
 Sen usta bir Siber-Mistik Astroloğusun. Kullanıcının Master DNA'sını ve doğum bilgilerini kullanarak ona en derinden dokunacak $periodText yorumlarını hazırlaman gerekiyor.
 
+[DOĞUM BİLGİLERİ - ZORUNLU]:
+- Doğum Tarihi: $birthDate
+- Doğum Saati: $birthTime
+- Doğum Yeri: $birthLocation
+
 [KODLANMIŞ MASTER DNA]:
 $dnaContext
 
 Yorum tarzın: Zarif, etkileyici, modern ve psikolojik derinliği olan bir dil olmalı. 
 ÖNEMLİ: Kullanıcının Master DNA'sındaki korkuları, travmaları veya hedefleriyle gökyüzü hareketleri arasında bağlantı kur (Örn: "Haritandaki Satürn döngüsü, DNA'ndaki 'yalnızlık' korkunu aslında bir güce dönüştürmen için seni sınıyor").
+KRİTİK TUTARLILIK KURALI:
+- "sun_sign" ve "rising_sign" alanlarını YALNIZCA yukarıdaki doğum bilgilerine göre belirle.
+- Bu iki alanı tahmin etme, genelleme yapma veya DNA metninden türetme.
 
 Lütfen aşağıdaki JSON formatında yanıt dön:
 {

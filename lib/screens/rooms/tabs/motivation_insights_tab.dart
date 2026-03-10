@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../config/app_theme.dart';
+import '../../../l10n/app_translations.dart';
 import '../../../models/goal_model.dart';
 import '../../../services/goal_service.dart';
 import '../../../services/progress_analysis_service.dart';
@@ -136,7 +137,7 @@ class _MotivationInsightsTabState extends State<MotivationInsightsTab>
             ),
             const SizedBox(height: 20),
             Text(
-              'Henüz analiz edilecek veri yok',
+              AppTranslations.get('noDataToAnalyze'),
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -145,7 +146,7 @@ class _MotivationInsightsTabState extends State<MotivationInsightsTab>
             ),
             const SizedBox(height: 8),
             Text(
-              'Önce "Kimlik" sekmesinden hedefini belirle.',
+              AppTranslations.get('setGoalFirst'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -181,7 +182,7 @@ class _MotivationInsightsTabState extends State<MotivationInsightsTab>
         children: [
           // Title
           Text(
-            'Genel İlerleme',
+            AppTranslations.get('overallProgress'),
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
@@ -229,7 +230,7 @@ class _MotivationInsightsTabState extends State<MotivationInsightsTab>
                   ),
                 ),
                 Text(
-                  'Tamamlandı',
+                  AppTranslations.get('completed'),
                   style: TextStyle(
                     fontSize: 12,
                     color: AppTheme.mutedSage,
@@ -250,7 +251,7 @@ class _MotivationInsightsTabState extends State<MotivationInsightsTab>
           child: _buildStatCard(
             icon: Icons.flag_rounded,
             value: '${_stats?.completedSteps ?? 0}/${_stats?.totalSteps ?? 0}',
-            label: 'Adım',
+            label: AppTranslations.get('step'),
             color: const Color(0xFF4CAF50),
           ),
         ),
@@ -259,7 +260,7 @@ class _MotivationInsightsTabState extends State<MotivationInsightsTab>
           child: _buildStatCard(
             icon: Icons.check_circle_rounded,
             value: '${_stats?.completedTasks ?? 0}/${_stats?.totalTasks ?? 0}',
-            label: 'Görev',
+            label: AppTranslations.get('task'),
             color: const Color(0xFF2196F3),
           ),
         ),
@@ -361,7 +362,7 @@ class _MotivationInsightsTabState extends State<MotivationInsightsTab>
             ),
             const SizedBox(width: 8),
             Text(
-              _isAnalyzing ? 'Analiz Ediliyor...' : '🔍 İlerlemeyi Analiz Et',
+              _isAnalyzing ? AppTranslations.get('analyzing') : AppTranslations.get('analyzeProgress'),
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 16,
@@ -402,7 +403,7 @@ class _MotivationInsightsTabState extends State<MotivationInsightsTab>
               ),
               const SizedBox(width: 12),
               Text(
-                'AI Analiz Raporu',
+                AppTranslations.get('aiAnalysisReport'),
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -427,7 +428,7 @@ class _MotivationInsightsTabState extends State<MotivationInsightsTab>
           if (_analysis!.strengths.isNotEmpty) ...[
             const SizedBox(height: 16),
             _buildListSection(
-              title: '✅ Güçlü Yönler',
+              title: AppTranslations.get('strengths'),
               items: _analysis!.strengths,
               color: Colors.green,
             ),
@@ -437,7 +438,7 @@ class _MotivationInsightsTabState extends State<MotivationInsightsTab>
           if (_analysis!.improvements.isNotEmpty) ...[
             const SizedBox(height: 12),
             _buildListSection(
-              title: '⚠️ Geliştirilecek',
+              title: AppTranslations.get('improvements'),
               items: _analysis!.improvements,
               color: Colors.orange,
             ),
@@ -459,7 +460,7 @@ class _MotivationInsightsTabState extends State<MotivationInsightsTab>
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Sonraki Odak: ${_analysis!.nextFocus}',
+                      '${AppTranslations.get('nextFocus')} ${_analysis!.nextFocus}',
                       style: const TextStyle(
                         fontSize: 13,
                         color: Color(0xFF9C27B0),

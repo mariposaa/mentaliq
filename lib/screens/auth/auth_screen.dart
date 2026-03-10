@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
+import '../../l10n/app_translations.dart';
 import '../../services/auth_service.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -37,7 +38,7 @@ class _AuthScreenState extends State<AuthScreen> {
       final email = _emailCtrl.text.trim();
       final password = _passwordCtrl.text.trim();
       if (email.isEmpty || password.isEmpty) {
-        throw FirebaseAuthException(code: 'invalid-input', message: 'Email ve şifre boş olamaz.');
+        throw FirebaseAuthException(code: 'invalid-input', message: AppTranslations.get('emailPasswordEmpty'));
       }
 
       if (_isRegisterMode) {
@@ -54,7 +55,7 @@ class _AuthScreenState extends State<AuthScreen> {
     } on FirebaseAuthException catch (e) {
       setState(() => _error = _mapAuthError(e));
     } catch (_) {
-      setState(() => _error = 'Beklenmeyen bir hata oluştu.');
+      setState(() => _error = AppTranslations.get('unexpectedError'));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -71,7 +72,7 @@ class _AuthScreenState extends State<AuthScreen> {
     } on FirebaseAuthException catch (e) {
       setState(() => _error = _mapAuthError(e));
     } catch (_) {
-      setState(() => _error = 'Google ile giriş yapılamadı.');
+      setState(() => _error = AppTranslations.get('googleSignInFailed'));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -80,14 +81,14 @@ class _AuthScreenState extends State<AuthScreen> {
   Future<void> _handleResetPassword() async {
     final email = _emailCtrl.text.trim();
     if (email.isEmpty) {
-      setState(() => _error = 'Şifre sıfırlama için email gir.');
+      setState(() => _error = AppTranslations.get('passwordResetEmail'));
       return;
     }
     try {
       await AuthService.sendPasswordReset(email);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Şifre sıfırlama bağlantısı gönderildi.')),
+        SnackBar(content: Text(AppTranslations.get('passwordResetSent'))),
       );
     } on FirebaseAuthException catch (e) {
       setState(() => _error = _mapAuthError(e));
@@ -97,19 +98,19 @@ class _AuthScreenState extends State<AuthScreen> {
   String _mapAuthError(FirebaseAuthException e) {
     switch (e.code) {
       case 'invalid-email':
-        return 'Email formatı geçersiz.';
+        return AppTranslations.get('invalidEmail');
       case 'invalid-credential':
       case 'wrong-password':
       case 'user-not-found':
-        return 'Email veya şifre hatalı.';
+        return AppTranslations.get('wrongCredentials');
       case 'email-already-in-use':
-        return 'Bu email zaten kayıtlı.';
+        return AppTranslations.get('emailInUse');
       case 'weak-password':
-        return 'Şifre en az 6 karakter olmalı.';
+        return AppTranslations.get('weakPassword');
       case 'account-exists-with-different-credential':
-        return 'Bu email farklı giriş yöntemi ile kayıtlı.';
+        return AppTranslations.get('differentSignInMethod');
       default:
-        return e.message ?? 'Kimlik doğrulama hatası.';
+        return e.message ?? AppTranslations.get('authError');
     }
   }
 
@@ -120,7 +121,7 @@ class _AuthScreenState extends State<AuthScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('Hesabını Güvenceye Al'),
+        title: Text(AppTranslations.get('secureYourAccount')),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -135,8 +136,8 @@ class _AuthScreenState extends State<AuthScreen> {
               ),
               child: Text(
                 AuthService.isAnonymous
-                    ? 'Şu an misafir oturumundasın. Hesap oluşturursan verilerini kalıcı hale getirirsin.'
-                    : 'Hesabın bağlı. Buradan farklı yöntemle tekrar giriş yapabilirsin.',
+                    ? AppTranslations.get('guestSessionInfo')
+                    : AppTranslations.get('accountLinkedInfo'),
                 style: const TextStyle(color: Colors.black87, height: 1.4),
               ),
             ),
@@ -144,20 +145,20 @@ class _AuthScreenState extends State<AuthScreen> {
             if (_isRegisterMode) ...[
               TextField(
                 controller: _nameCtrl,
-                decoration: const InputDecoration(labelText: 'İsim (opsiyonel)'),
+                decoration: InputDecoration(labelText: AppTranslations.get('nameOptional')),
               ),
               const SizedBox(height: 10),
             ],
             TextField(
               controller: _emailCtrl,
               keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(labelText: 'Email'),
+              decoration: InputDecoration(labelText: AppTranslations.get('email')),
             ),
             const SizedBox(height: 10),
             TextField(
               controller: _passwordCtrl,
               obscureText: true,
-              decoration: const InputDecoration(labelText: 'Şifre'),
+              decoration: InputDecoration(labelText: AppTranslations.get('password')),
             ),
             const SizedBox(height: 14),
             if (_error != null)
@@ -173,19 +174,19 @@ class _AuthScreenState extends State<AuthScreen> {
                       width: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text(_isRegisterMode ? 'Email ile Kayıt Ol' : 'Email ile Giriş Yap'),
+                  : Text(_isRegisterMode ? AppTranslations.get('emailSignUp') : AppTranslations.get('emailSignIn')),
             ),
             const SizedBox(height: 10),
             OutlinedButton.icon(
               onPressed: _isLoading ? null : _handleGoogle,
               icon: const Icon(Icons.login_rounded),
-              label: const Text('Google ile Devam Et'),
+              label: Text(AppTranslations.get('continueWithGoogle')),
             ),
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: _isLoading ? null : _handleResetPassword,
-                child: const Text('Şifremi unuttum'),
+                child: Text(AppTranslations.get('forgotPassword')),
               ),
             ),
             const SizedBox(height: 6),
@@ -198,8 +199,8 @@ class _AuthScreenState extends State<AuthScreen> {
                       }),
               child: Text(
                 _isRegisterMode
-                    ? 'Zaten hesabın var mı? Giriş yap'
-                    : 'Hesabın yok mu? Kayıt ol',
+                    ? AppTranslations.get('alreadyHaveAccount')
+                    : AppTranslations.get('dontHaveAccount'),
               ),
             ),
           ],

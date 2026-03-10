@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
+import '../../l10n/app_translations.dart';
 import 'tabs/relationship_chat_tab.dart';
 import 'tabs/relationship_tests_tab.dart';
 import 'tabs/relationship_tips_tab.dart';
@@ -18,10 +19,10 @@ class _RelationshipRoomScreenState extends State<RelationshipRoomScreen>
   late TabController _tabController;
 
   // Tab tanımları - Partner Bilgileri ilk sırada
-  final List<_TabInfo> _tabs = [
-    _TabInfo(label: 'Partner Bilgileri', icon: Icons.favorite_outline_rounded),
-    _TabInfo(label: 'İlişki Analizi', icon: Icons.chat_bubble_outline_rounded),
-    _TabInfo(label: 'Analiz Tavsiyeler', icon: Icons.lightbulb_outline_rounded),
+  late final List<_TabInfo> _tabs = [
+    _TabInfo(label: AppTranslations.get('partnerInfo'), icon: Icons.favorite_outline_rounded),
+    _TabInfo(label: AppTranslations.get('relationshipAnalysis'), icon: Icons.chat_bubble_outline_rounded),
+    _TabInfo(label: AppTranslations.get('analysisTips'), icon: Icons.lightbulb_outline_rounded),
   ];
 
   @override
@@ -93,13 +94,13 @@ class _RelationshipRoomScreenState extends State<RelationshipRoomScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'İlişki Desteği',
+                  AppTranslations.get('relationshipSupport'),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                 ),
                 Text(
-                  'Romantik ilişkiler ve iletişim',
+                  AppTranslations.get('romanticRelationships'),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppTheme.mutedSage,
                       ),

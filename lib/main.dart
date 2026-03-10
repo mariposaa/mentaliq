@@ -4,9 +4,10 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'config/app_theme.dart';
-import 'config/app_locale.dart';
+import 'providers/language_provider.dart';
 import 'services/auth_service.dart';
 import 'services/gemini_service.dart';
 import 'services/shadow_memory_service.dart';
@@ -18,6 +19,8 @@ import 'services/progress_analysis_service.dart';
 import 'services/token_service.dart';
 import 'services/user_dna_service.dart';
 import 'services/ad_service.dart';
+import 'services/proactive_checkin_service.dart';
+import 'services/push_notification_service.dart';
 import 'screens/splash_screen.dart';
 
 void main() async {
@@ -102,6 +105,26 @@ void main() async {
     debugPrint('⚠ Ad service error: $e');
   }
 
+  // ═════════════════════════════════════════════════════════════════════
+  // STEP 7: Initialize push notifications
+  // ═════════════════════════════════════════════════════════════════════
+  try {
+    await PushNotificationService.initialize();
+    debugPrint('✓ Push notifications initialized');
+  } catch (e) {
+    debugPrint('⚠ Push notification init error: $e');
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // STEP 8: Initialize proactive check-ins
+  // ═════════════════════════════════════════════════════════════════════
+  try {
+    await ProactiveCheckInService.initialize();
+    debugPrint('✓ Proactive check-ins initialized');
+  } catch (e) {
+    debugPrint('⚠ Proactive check-in error: $e');
+  }
+
   debugPrint('════════════════════════════════════════');
   debugPrint('ALL SERVICES READY - STARTING APP');
   debugPrint('════════════════════════════════════════');
@@ -114,18 +137,25 @@ class MentaliqApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'mentaliq',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      locale: AppLocale.locale,
-      supportedLocales: AppLocale.supportedLocales,
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      home: const SplashScreen(),
+    return ChangeNotifierProvider(
+      create: (_) => LanguageProvider(),
+      child: Consumer<LanguageProvider>(
+        builder: (context, langProvider, _) {
+          return MaterialApp(
+            title: 'mentaliq',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            locale: langProvider.locale,
+            supportedLocales: LanguageProvider.supportedLocales,
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            home: const SplashScreen(),
+          );
+        },
+      ),
     );
   }
 }

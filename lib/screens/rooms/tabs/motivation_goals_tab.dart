@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
+import '../../../l10n/app_translations.dart';
 import '../../../models/goal_model.dart';
 import '../../../services/goal_service.dart';
 import '../../../services/shadow_memory_service.dart';
@@ -90,7 +91,7 @@ class _MotivationGoalsTabState extends State<MotivationGoalsTab>
 
       if (goal != null) {
         setState(() => _existingGoal = goal);
-        _showSnackbar('Hedef kaydedildi! Şimdi yol haritası oluşturuluyor...', isSuccess: true);
+        _showSnackbar(AppTranslations.get('goalSaved'), isSuccess: true);
         
         // Shadow Memory analizi - Hedef ve yetenekleri DNA'ya işle
         final contextData = "YENİ HEDEF TANIMI:\n"
@@ -102,7 +103,7 @@ class _MotivationGoalsTabState extends State<MotivationGoalsTab>
 
         // TODO: Generate roadmap with Gemini (Tab 2)
       } else {
-        _showSnackbar('Bir hata oluştu. Tekrar dene.', isSuccess: false);
+        _showSnackbar(AppTranslations.get('errorSave'), isSuccess: false);
       }
     }
   }
@@ -141,27 +142,27 @@ class _MotivationGoalsTabState extends State<MotivationGoalsTab>
             const SizedBox(height: 20),
             
             // Form fields
-            _buildSectionTitle('🎯 Ana Hedefin'),
+            _buildSectionTitle(AppTranslations.get('mainGoal')),
             const SizedBox(height: 8),
             _buildTitleField(),
             const SizedBox(height: 20),
             
-            _buildSectionTitle('👤 Mevcut Durumun'),
+            _buildSectionTitle(AppTranslations.get('currentStatus')),
             const SizedBox(height: 8),
             _buildStatusField(),
             const SizedBox(height: 20),
 
-            _buildSectionTitle('💪 Yeteneklerin & Deneyimlerin'),
+            _buildSectionTitle(AppTranslations.get('skills')),
             const SizedBox(height: 8),
             _buildSkillsField(),
             const SizedBox(height: 20),
             
-            _buildSectionTitle('⏰ Günlük Süre'),
+            _buildSectionTitle(AppTranslations.get('dailyTime')),
             const SizedBox(height: 8),
             _buildTimeSlider(),
             const SizedBox(height: 20),
             
-            _buildSectionTitle('📝 Özel Notlar'),
+            _buildSectionTitle(AppTranslations.get('specialNotes')),
             const SizedBox(height: 8),
             _buildNotesField(),
             const SizedBox(height: 24),
@@ -213,7 +214,7 @@ class _MotivationGoalsTabState extends State<MotivationGoalsTab>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _existingGoal != null ? 'Hedefini Güncelle' : 'Hedefini Tanımla',
+                  _existingGoal != null ? AppTranslations.get('updateGoal') : AppTranslations.get('defineGoal'),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -222,7 +223,7 @@ class _MotivationGoalsTabState extends State<MotivationGoalsTab>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Bu bilgiler sana özel yol haritası oluşturmak için kullanılacak.',
+                  AppTranslations.get('goalInfoDesc'),
                   style: TextStyle(
                     fontSize: 12,
                     color: AppTheme.mutedSage,
@@ -251,7 +252,7 @@ class _MotivationGoalsTabState extends State<MotivationGoalsTab>
     return TextFormField(
       controller: _titleController,
       decoration: InputDecoration(
-        hintText: 'Örn: KPSS\'yi kazanmak, Yazılım öğrenmek...',
+        hintText: AppTranslations.get('mainGoalHint'),
         hintStyle: TextStyle(color: AppTheme.mutedSage, fontSize: 14),
         filled: true,
         fillColor: AppTheme.warmCream,
@@ -271,7 +272,7 @@ class _MotivationGoalsTabState extends State<MotivationGoalsTab>
       ),
       validator: (value) {
         if (value == null || value.trim().isEmpty) {
-          return 'Lütfen ana hedefini gir';
+          return AppTranslations.get('errorMainGoal');
         }
         return null;
       },
@@ -282,7 +283,7 @@ class _MotivationGoalsTabState extends State<MotivationGoalsTab>
     return TextFormField(
       controller: _statusController,
       decoration: InputDecoration(
-        hintText: 'Örn: Öğrenci, 24 yaşında / Yazılımcı...',
+        hintText: AppTranslations.get('currentStatusHint'),
         hintStyle: TextStyle(color: AppTheme.mutedSage, fontSize: 14),
         filled: true,
         fillColor: AppTheme.warmCream,
@@ -302,7 +303,7 @@ class _MotivationGoalsTabState extends State<MotivationGoalsTab>
       ),
       validator: (value) {
         if (value == null || value.trim().isEmpty) {
-          return 'Mevcut durumunu gir';
+          return AppTranslations.get('errorCurrentStatus');
         }
         return null;
       },
@@ -314,7 +315,7 @@ class _MotivationGoalsTabState extends State<MotivationGoalsTab>
       controller: _skillsController,
       maxLines: 2,
       decoration: InputDecoration(
-        hintText: 'Örn: Hızlı öğrenirim, El becerim iyidir, Excel bilirim...',
+        hintText: AppTranslations.get('skillsHint'),
         hintStyle: TextStyle(color: AppTheme.mutedSage, fontSize: 14),
         filled: true,
         fillColor: AppTheme.warmCream,
@@ -349,7 +350,7 @@ class _MotivationGoalsTabState extends State<MotivationGoalsTab>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Günde kaç saat ayırabilirsin?',
+                AppTranslations.get('dailyHoursQuestion'),
                 style: TextStyle(
                   fontSize: 13,
                   color: AppTheme.forestCharcoal,
@@ -362,7 +363,7 @@ class _MotivationGoalsTabState extends State<MotivationGoalsTab>
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  '${_dailyHours.round()} saat',
+                  '${_dailyHours.round()} ${AppTranslations.get('hours')}',
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
@@ -392,8 +393,8 @@ class _MotivationGoalsTabState extends State<MotivationGoalsTab>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('1 saat', style: TextStyle(fontSize: 11, color: AppTheme.mutedSage)),
-              Text('8 saat', style: TextStyle(fontSize: 11, color: AppTheme.mutedSage)),
+              Text(AppTranslations.get('oneHour'), style: TextStyle(fontSize: 11, color: AppTheme.mutedSage)),
+              Text(AppTranslations.get('eightHours'), style: TextStyle(fontSize: 11, color: AppTheme.mutedSage)),
             ],
           ),
         ],
@@ -406,7 +407,7 @@ class _MotivationGoalsTabState extends State<MotivationGoalsTab>
       controller: _notesController,
       maxLines: 3,
       decoration: InputDecoration(
-        hintText: 'Örn: Sabahları çalışamıyorum, Matematiğim zayıf...',
+        hintText: AppTranslations.get('specialNotesHint'),
         hintStyle: TextStyle(color: AppTheme.mutedSage, fontSize: 14),
         filled: true,
         fillColor: AppTheme.warmCream,
@@ -468,8 +469,8 @@ class _MotivationGoalsTabState extends State<MotivationGoalsTab>
             ],
             Text(
               _isLoading 
-                  ? 'Kaydediliyor...' 
-                  : (_existingGoal != null ? '✨ Hedefi Güncelle' : '🚀 Yol Haritası Oluştur'),
+                  ? AppTranslations.get('saving') 
+                  : (_existingGoal != null ? AppTranslations.get('updateGoalButton') : AppTranslations.get('createRoadmap')),
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 16,

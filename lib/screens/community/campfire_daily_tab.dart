@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../config/app_theme.dart';
+import '../../l10n/app_translations.dart';
 import '../../models/forum_post.dart';
 import '../../models/forum_daily_question.dart';
 import '../../services/forum_service.dart';
@@ -49,10 +50,10 @@ class _CampfireDailyTabState extends State<CampfireDailyTab> {
       );
       if (mounted) {
         _answerController.clear();
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cevabın paylaşıldı')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppTranslations.get('answerShared'))));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Hata: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${AppTranslations.get('error')} $e')));
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -67,9 +68,9 @@ class _CampfireDailyTabState extends State<CampfireDailyTab> {
           children: [
             Icon(Icons.help_outline_rounded, size: 56, color: AppTheme.terracotta.withOpacity(0.5)),
             const SizedBox(height: 12),
-            Text('Bugünün sorusu henüz yok', style: TextStyle(fontSize: 15, color: AppTheme.mutedSage)),
+            Text(AppTranslations.get('noQuestionYet'), style: TextStyle(fontSize: 15, color: AppTheme.mutedSage)),
             const SizedBox(height: 4),
-            Text('Bu alan ileride doldurulacak', style: TextStyle(fontSize: 13, color: AppTheme.mutedSage)),
+            Text(AppTranslations.get('areaWillBeFilled'), style: TextStyle(fontSize: 13, color: AppTheme.mutedSage)),
           ],
         ),
       );
@@ -94,13 +95,13 @@ class _CampfireDailyTabState extends State<CampfireDailyTab> {
             ),
           ),
           const SizedBox(height: 20),
-          Text('Cevabını yaz', style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppTheme.forestCharcoal)),
+          Text(AppTranslations.get('writeAnswer'), style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppTheme.forestCharcoal)),
           const SizedBox(height: 8),
           TextField(
             controller: _answerController,
             maxLines: 4,
             decoration: InputDecoration(
-              hintText: 'Düşünceni paylaş...',
+              hintText: AppTranslations.get('shareThoughts'),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               filled: true,
               fillColor: AppTheme.warmCream,
@@ -110,10 +111,10 @@ class _CampfireDailyTabState extends State<CampfireDailyTab> {
           FilledButton(
             onPressed: _sending ? null : _submitAnswer,
             style: FilledButton.styleFrom(backgroundColor: AppTheme.terracotta),
-            child: _sending ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('Gönder'),
+            child: _sending ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : Text(AppTranslations.get('send')),
           ),
           const SizedBox(height: 24),
-          Text('Diğer cevaplar', style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppTheme.forestCharcoal)),
+          Text(AppTranslations.get('otherAnswers'), style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppTheme.forestCharcoal)),
           const SizedBox(height: 8),
           StreamBuilder<List<ForumPost>>(
             stream: ForumService.watchDailyAnswers(q.id),

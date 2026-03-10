@@ -185,6 +185,11 @@ class UserDNAModel {
         parts.add('[MÜCADELE: ${a.id.toUpperCase()}]');
         parts.add(' - Temiz Gün: ${a.streakDays}');
         parts.add(' - İrade Puanı: ${a.willpowerIndex}');
+        parts.add(' - Bagimlilik Siddeti (0-10): ${a.dependencySeverity}');
+        parts.add(' - Degisim Asamasi: ${a.changeStage}');
+        if (a.intakeSummary.isNotEmpty) {
+          parts.add(' - Intake Ozeti: ${a.intakeSummary}');
+        }
         if (a.id == 'gambling') {
              parts.add(' - KAYIP / RİSK VERİLERİ (AUDITOR İÇİN):');
              parts.add('   * Toplam Kayıp: ${a.totalLostCapital}');
@@ -282,6 +287,12 @@ class AddictionDna {
   final DateTime? lastRelapse;
   final String currentMission;
   final bool isMissionCompleted;
+  final bool assessmentCompleted;
+  final int dependencySeverity; // 0-10
+  final String changeStage; // precontemplation, contemplation, preparation, action, maintenance
+  final int dailyEpisodes; // self-reported count
+  final String intakeSummary;
+  final DateTime? lastAssessmentAt;
 
   AddictionDna({
     required this.id,
@@ -295,6 +306,12 @@ class AddictionDna {
     this.lastRelapse,
     this.currentMission = '',
     this.isMissionCompleted = false,
+    this.assessmentCompleted = false,
+    this.dependencySeverity = 0,
+    this.changeStage = 'contemplation',
+    this.dailyEpisodes = 0,
+    this.intakeSummary = '',
+    this.lastAssessmentAt,
   });
 
   Map<String, dynamic> toMap() {
@@ -310,24 +327,63 @@ class AddictionDna {
       'last_relapse': lastRelapse?.toIso8601String(),
       'current_mission': currentMission,
       'is_mission_completed': isMissionCompleted,
+      'assessment_completed': assessmentCompleted,
+      'dependency_severity': dependencySeverity,
+      'change_stage': changeStage,
+      'daily_episodes': dailyEpisodes,
+      'intake_summary': intakeSummary,
+      'last_assessment_at': lastAssessmentAt?.toIso8601String(),
     };
+  }
+
+  static bool _asBool(dynamic value, {bool fallback = false}) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) {
+      final v = value.trim().toLowerCase();
+      if (v == 'true' || v == '1' || v == 'yes') return true;
+      if (v == 'false' || v == '0' || v == 'no') return false;
+    }
+    return fallback;
+  }
+
+  static int _asInt(dynamic value, {int fallback = 0}) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? fallback;
+    return fallback;
+  }
+
+  static double _asDouble(dynamic value, {double fallback = 0.0}) {
+    if (value is double) return value;
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? fallback;
+    return fallback;
   }
 
   factory AddictionDna.fromMap(Map<String, dynamic> map) {
     return AddictionDna(
       id: map['id'] ?? '',
       type: map['type'] ?? '',
-      willpowerIndex: (map['willpower_index'] as num?)?.toDouble() ?? 0.5,
-      totalLostCapital: (map['total_lost_capital'] as num?)?.toDouble() ?? 0.0,
-      averageDailyBet: (map['average_daily_bet'] as num?)?.toDouble() ?? 0.0,
+      willpowerIndex: _asDouble(map['willpower_index'], fallback: 0.5),
+      totalLostCapital: _asDouble(map['total_lost_capital'], fallback: 0.0),
+      averageDailyBet: _asDouble(map['average_daily_bet'], fallback: 0.0),
       highRiskDays: map['high_risk_days'] != null 
           ? (map['high_risk_days'] as List).map((e) => DateTime.parse(e)).toList() 
           : [],
-      streakDays: map['streak_days'] ?? 0,
+      streakDays: _asInt(map['streak_days'], fallback: 0),
       triggers: List<String>.from(map['triggers'] ?? []),
       lastRelapse: map['last_relapse'] != null ? DateTime.parse(map['last_relapse']) : null,
       currentMission: map['current_mission'] ?? '',
-      isMissionCompleted: map['is_mission_completed'] ?? false,
+      isMissionCompleted: _asBool(map['is_mission_completed'], fallback: false),
+      assessmentCompleted: _asBool(map['assessment_completed'], fallback: false),
+      dependencySeverity: _asInt(map['dependency_severity'], fallback: 0),
+      changeStage: map['change_stage'] ?? 'contemplation',
+      dailyEpisodes: _asInt(map['daily_episodes'], fallback: 0),
+      intakeSummary: map['intake_summary'] ?? '',
+      lastAssessmentAt: map['last_assessment_at'] != null
+          ? DateTime.parse(map['last_assessment_at'])
+          : null,
     );
   }
 }

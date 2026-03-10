@@ -16,6 +16,7 @@ import '../../models/natal_chart_model.dart';
 import '../../models/daily_guidance_model.dart';
 import '../../services/natal_chart_service.dart';
 import '../../services/astro_guidance_service.dart';
+import '../../l10n/app_translations.dart';
 
 /// Astroloji ve Rüya Room - Kozmik HUD Tasarımı
 class AstrologyDreamRoomScreen extends StatefulWidget {
@@ -25,10 +26,8 @@ class AstrologyDreamRoomScreen extends StatefulWidget {
   State<AstrologyDreamRoomScreen> createState() => _AstrologyDreamRoomScreenState();
 }
 
-class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen> 
-    with SingleTickerProviderStateMixin {
-  
-  late TabController _tabController;
+class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen> {
+
   late TextEditingController _dateController;
   late TextEditingController _timeController;
   late TextEditingController _locationController;
@@ -59,17 +58,9 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
   int _activeHoroscopeTab = 0; // 0: Günlük, 1: Haftalık
   String _userZodiac = 'Aries';
 
-  // Tab tanımları
-  final List<_TabInfo> _tabs = [
-    _TabInfo(label: 'Astroloji', icon: Icons.auto_awesome_rounded),
-    _TabInfo(label: 'Rüya Tabiri', icon: Icons.nightlight_round),
-    _TabInfo(label: 'Günlük Yorum', icon: Icons.calendar_today_rounded),
-  ];
-
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this);
     _dateController = TextEditingController();
     _timeController = TextEditingController();
     _locationController = TextEditingController();
@@ -123,9 +114,19 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
 
   /// Calculate natal chart (one-time, free)
   Future<void> _calculateNatalChart() async {
+    final hasNatal = _natalChart != null && _natalChart!.isValid;
+    if (hasNatal && _hasCalculatedNatalToday()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppTranslations.get('natalRecalculateOncePerDay'))),
+        );
+      }
+      return;
+    }
+
     if (_dateController.text.isEmpty || _timeController.text.isEmpty || _locationController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lütfen tüm doğum bilgilerini eksiksiz girin.')),
+        SnackBar(content: Text(AppTranslations.get('errorBirthInfoIncomplete'))),
       );
       return;
     }
@@ -146,9 +147,9 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               backgroundColor: Colors.green,
-              content: Text('Natal haritanız başarıyla hesaplandı!'),
+              content: Text(AppTranslations.get('successNatalChart')),
             ),
           );
         }
@@ -159,7 +160,7 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
       debugPrint('Natal Chart Error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Natal harita hesaplanamadı: $e')),
+          SnackBar(content: Text('${AppTranslations.get('errorNatalChartFailed')} $e')),
         );
       }
     } finally {
@@ -171,7 +172,7 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
   Future<void> _generateDailyGuidance() async {
     if (_natalChart == null || !_natalChart!.isValid) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Önce natal haritanızı hesaplatın.')),
+        SnackBar(content: Text(AppTranslations.get('errorNatalChartRequired'))),
       );
       return;
     }
@@ -180,7 +181,7 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
     final hasGuidance = await AstroGuidanceService.hasGuidanceForToday();
     if (hasGuidance && _dailyGuidance != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bugünkü yönergeniz zaten mevcut.')),
+        SnackBar(content: Text(AppTranslations.get('guidanceExists'))),
       );
       return;
     }
@@ -198,15 +199,15 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A3F),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Günlük Yönerge', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: const Text(
-          'Kişisel astrolojik yönergeniz için 15 token kullanılacak. Onaylıyor musun?',
-          style: TextStyle(color: Colors.white70),
+        title: Text(AppTranslations.get('dailyGuidanceTitle'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Text(
+          AppTranslations.get('dailyGuidanceConfirm'),
+          style: const TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('İPTAL', style: TextStyle(color: Colors.white38)),
+            child: Text(AppTranslations.get('cancel'), style: const TextStyle(color: Colors.white38)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
@@ -215,7 +216,7 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
               foregroundColor: Colors.cyanAccent,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('EVET (15 🪙)'),
+            child: Text(AppTranslations.get('yesWithTokens')),
           ),
         ],
       ),
@@ -256,15 +257,15 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A3F),
-        title: const Text('Token Yetersiz', style: TextStyle(color: Colors.white)),
-        content: const Text(
-          'Günlük yönerge için 15 token gerekiyor. Reklam izleyerek 30 token kazanmak ister misin?',
-          style: TextStyle(color: Colors.white70),
+        title: Text(AppTranslations.get('insufficientTokens'), style: const TextStyle(color: Colors.white)),
+        content: Text(
+          AppTranslations.get('insufficientTokensMsg'),
+          style: const TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('İPTAL', style: TextStyle(color: Colors.white38)),
+            child: Text(AppTranslations.get('cancel'), style: const TextStyle(color: Colors.white38)),
           ),
           TextButton(
             onPressed: () async {
@@ -275,9 +276,9 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
                 await TokenService.addTokens(TokenService.adRewardTokens);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
+                    SnackBar(
                       backgroundColor: Colors.green,
-                      content: Text('Tebrikler! 30 Token hesabına eklendi.'),
+                      content: Text(AppTranslations.get('congratsTokensAdded')),
                     ),
                   );
                 }
@@ -286,7 +287,7 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
                 setState(() => _isGeneratingGuidance = false);
               }
             },
-            child: const Text('İZLE (+30 🪙)', style: TextStyle(color: Colors.orangeAccent)),
+            child: Text(AppTranslations.get('watchAdTokens'), style: const TextStyle(color: Colors.orangeAccent)),
           ),
         ],
       ),
@@ -296,7 +297,7 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
   Future<void> _saveData() async {
     if (_dateController.text.isEmpty || _locationController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lütfen tarih ve yer bilgilerini giriniz.')),
+        SnackBar(content: Text(AppTranslations.get('errorDateLocation'))),
       );
       return;
     }
@@ -315,19 +316,19 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
       await _loadHoroscopeData();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Colors.green,
-            content: Text('Doğum bilgileriniz güncellendi.'),
-          ),
+            SnackBar(
+              backgroundColor: Colors.green,
+              content: Text(AppTranslations.get('birthInfoUpdated')),
+            ),
         );
       }
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Colors.redAccent,
-            content: Text('Bilgiler kaydedilemedi.'),
-          ),
+            SnackBar(
+              backgroundColor: Colors.redAccent,
+              content: Text(AppTranslations.get('errorSaveFailed')),
+            ),
         );
       }
     }
@@ -398,7 +399,6 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
 
   @override
   void dispose() {
-    _tabController.dispose();
     _dateController.dispose();
     _timeController.dispose();
     _locationController.dispose();
@@ -467,15 +467,15 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A3F),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Kozmik Rüya Analizi', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: const Text(
-          'Bu derin analiz için 20 token kullanılacak. Onaylıyor musun?', 
-          style: TextStyle(color: Colors.white70)
+        title: Text(AppTranslations.get('cosmicDreamAnalysis'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Text(
+          AppTranslations.get('dreamAnalysisConfirm'), 
+          style: const TextStyle(color: Colors.white70)
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false), 
-            child: const Text('İPTAL', style: TextStyle(color: Colors.white38))
+            child: Text(AppTranslations.get('cancel'), style: const TextStyle(color: Colors.white38))
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
@@ -516,7 +516,7 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
       debugPrint('Dream Analysis Error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Rüya analiz edilirken bir sorun oluştu.')),
+          SnackBar(content: Text(AppTranslations.get('errorDreamAnalysis'))),
         );
       }
     } finally {
@@ -531,10 +531,10 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A3F),
-        title: const Text('Token Yetersiz', style: TextStyle(color: Colors.white)),
-        content: const Text('Rüya analizi için 20 token gerekiyor. Reklam izleyerek 30 token kazanmak ister misin?', style: TextStyle(color: Colors.white70)),
+        title: Text(AppTranslations.get('insufficientTokens'), style: const TextStyle(color: Colors.white)),
+        content: Text(AppTranslations.get('dreamInsufficientTokens'), style: const TextStyle(color: Colors.white70)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('İPTAL', style: TextStyle(color: Colors.white38))),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(AppTranslations.get('cancel'), style: const TextStyle(color: Colors.white38))),
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
@@ -544,15 +544,15 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
                 await TokenService.addTokens(TokenService.adRewardTokens);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(backgroundColor: Colors.green, content: Text('Tebrikler! 30 Token hesabına eklendi.')),
+                    SnackBar(backgroundColor: Colors.green, content: Text(AppTranslations.get('congratsTokensAdded'))),
                   );
                 }
-                _runDreamAnalysis(); // Jeton kazanınca tekrar dene
+                _runDreamAnalysis();
               } else {
                 setState(() => _isDreamAnalyzing = false);
               }
             }, 
-            child: const Text('İZLE (+30 🪙)', style: TextStyle(color: Colors.orangeAccent))
+            child: Text(AppTranslations.get('watchAdTokens'), style: const TextStyle(color: Colors.orangeAccent))
           ),
         ],
       ),
@@ -597,11 +597,11 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
         });
 
         if (daily == null || weekly == null) {
-          final error = HoroscopeService.lastError ?? 'Bilinmeyen bir hata oluştu.';
+          final error = HoroscopeService.lastError ?? '';
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               backgroundColor: Colors.amber,
-              content: Text('Yorumlar hazırlanamadı: $error'),
+              content: Text('${AppTranslations.get('horoscopeUnavailable')} $error'),
             ),
           );
         }
@@ -636,17 +636,7 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
           child: Column(
             children: [
               _buildPremiumHeader(),
-              _buildTabBar(),
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildAstrologyTab(),
-                    _buildDreamTab(),
-                    _buildHoroscopeTab(),
-                  ],
-                ),
-              ),
+              Expanded(child: _buildAstrologyTab()),
             ],
           ),
         ),
@@ -664,6 +654,22 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _GlassCard(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline_rounded, color: Colors.amberAccent, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    AppTranslations.get('dailyAnalysisOncePerDay'),
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
           // Birth Info Card (always visible, collapsible)
           _buildBirthInfoCard(),
           const SizedBox(height: 20),
@@ -672,6 +678,8 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
           if (_natalChart == null || !_natalChart!.isValid)
             _buildNatalChartSetup()
           else ...[
+            _buildDailyHoroscopeInline(),
+            const SizedBox(height: 20),
             // Natal Chart Summary Card
             _buildNatalChartSummary(),
             const SizedBox(height: 20),
@@ -691,13 +699,75 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
     );
   }
 
+  Widget _buildDailyHoroscopeInline() {
+    final data = _dailyHoroscope;
+    final sunSign = _natalChart?.sunSign ?? data?.sunSign ?? '';
+    final risingSign = _natalChart?.risingSign ?? data?.risingSign ?? '';
+    if (data == null) {
+      return _GlassCard(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            const Icon(Icons.wb_sunny_outlined, color: Colors.white54, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                AppTranslations.get('horoscopeUnavailable'),
+                style: const TextStyle(color: Colors.white60, fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return _GlassCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            AppTranslations.get('dailyHoroscope'),
+            style: const TextStyle(
+              color: Colors.cyanAccent,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            '${AppTranslations.get('sunSign')}: $sunSign',
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            data.sunInterpretation,
+            style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.4),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '${AppTranslations.get('risingSign')}: $risingSign',
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            data.risingInterpretation,
+            style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.4),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBirthInfoCard() {
     final hasNatal = _natalChart != null && _natalChart!.isValid;
+    final canRecalculate = !hasNatal || !_hasCalculatedNatalToday();
     
     return _GlassCard(
       child: ExpansionTile(
-        title: Text(
-          hasNatal ? 'Doğum Bilgileri ✓' : 'Doğum Bilgileri',
+        title:         Text(
+          hasNatal ? AppTranslations.get('birthInfoVerified') : AppTranslations.get('birthInfo'),
           style: TextStyle(
             color: hasNatal ? Colors.greenAccent : Colors.white,
             fontWeight: FontWeight.bold,
@@ -716,19 +786,19 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
         initiallyExpanded: !hasNatal,
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
         children: [
-          _buildInputField(_dateController, 'Doğum Tarihi', 'Gün . Ay . Yıl', Icons.calendar_today, onTap: _selectDate, readOnly: true),
+          _buildInputField(_dateController, AppTranslations.get('birthDate'), AppTranslations.get('birthDateHint'), Icons.calendar_today, onTap: _selectDate, readOnly: true),
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _buildInputField(_timeController, 'Saat (Önemli!)', '14:30', Icons.access_time, onTap: _selectTime, readOnly: true)),
+              Expanded(child: _buildInputField(_timeController, AppTranslations.get('birthTimeLabel'), '14:30', Icons.access_time, onTap: _selectTime, readOnly: true)),
               const SizedBox(width: 12),
-              Expanded(flex: 2, child: _buildInputField(_locationController, 'Doğum Yeri', 'İstanbul', Icons.location_on)),
+              Expanded(flex: 2, child: _buildInputField(_locationController, AppTranslations.get('birthPlace'), 'Istanbul', Icons.location_on)),
             ],
           ),
           const SizedBox(height: 8),
           Text(
-            'Doğum saati, yükselen burcunuz için kritik öneme sahiptir.',
-            style: TextStyle(color: Colors.white38, fontSize: 11),
+            AppTranslations.get('birthTimeImportance'),
+            style: const TextStyle(color: Colors.white38, fontSize: 11),
           ),
           const SizedBox(height: 16),
           Row(
@@ -741,14 +811,14 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
                     foregroundColor: Colors.white70,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text('KAYDET'),
+                  child: Text(AppTranslations.get('save')),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 flex: 2,
                 child: ElevatedButton(
-                  onPressed: _isCalculatingNatal ? null : _calculateNatalChart,
+                  onPressed: (_isCalculatingNatal || !canRecalculate) ? null : _calculateNatalChart,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.cyanAccent.withOpacity(0.2),
                     foregroundColor: Colors.cyanAccent,
@@ -757,14 +827,29 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
                   ),
                   child: _isCalculatingNatal
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.cyanAccent))
-                      : Text(hasNatal ? 'YENİDEN HESAPLA' : 'HARİTAMI HESAPLA'),
+                      : Text(hasNatal ? AppTranslations.get('recalculate') : AppTranslations.get('calculateMyChart')),
                 ),
               ),
             ],
           ),
+          if (hasNatal && !canRecalculate)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Text(
+                AppTranslations.get('natalRecalculateOncePerDay'),
+                style: const TextStyle(color: Colors.orangeAccent, fontSize: 11),
+              ),
+            ),
         ],
       ),
     );
+  }
+
+  bool _hasCalculatedNatalToday() {
+    final ts = _natalChart?.calculatedAt;
+    if (ts == null) return false;
+    final now = DateTime.now();
+    return ts.year == now.year && ts.month == now.month && ts.day == now.day;
   }
 
   Widget _buildInputField(
@@ -813,15 +898,15 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
             child: const Icon(Icons.auto_awesome, color: Colors.cyanAccent, size: 48),
           ),
           const SizedBox(height: 24),
-          const Text(
-            'Kişisel Astroloji Merkezi',
-            style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+          Text(
+            AppTranslations.get('personalAstrologyCenter'),
+            style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          const Text(
-            'Natal haritanız, doğum anındaki gökyüzünün benzersiz bir fotoğrafıdır. Güneş, Ay ve Yükselen burcunuzla birlikte 12 evinizi hesaplayalım.',
+          Text(
+            AppTranslations.get('natalChartDesc'),
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white70, height: 1.5),
+            style: const TextStyle(color: Colors.white70, height: 1.5),
           ),
           const SizedBox(height: 24),
           Container(
@@ -833,11 +918,11 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
             ),
             child: Column(
               children: [
-                _buildSetupStep(1, 'Doğum bilgilerinizi girin', Icons.edit_calendar),
+                _buildSetupStep(1, AppTranslations.get('enterBirthInfo'), Icons.edit_calendar),
                 const SizedBox(height: 12),
-                _buildSetupStep(2, 'Natal haritanızı hesaplatın (Ücretsiz)', Icons.calculate),
+                _buildSetupStep(2, AppTranslations.get('calculateNatalChart'), Icons.calculate),
                 const SizedBox(height: 12),
-                _buildSetupStep(3, 'Günlük yönergelerinizi alın', Icons.auto_awesome),
+                _buildSetupStep(3, AppTranslations.get('getDailyGuidance'), Icons.auto_awesome),
               ],
             ),
           ),
@@ -886,9 +971,9 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
             children: [
               const Icon(Icons.auto_awesome, color: Colors.cyanAccent, size: 20),
               const SizedBox(width: 8),
-              const Text(
-                'NATAL HARİTAN',
-                style: TextStyle(
+              Text(
+                AppTranslations.get('yourNatalChart'),
+                style: const TextStyle(
                   color: Colors.cyanAccent,
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
@@ -901,17 +986,17 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
           // Big 3: Sun, Moon, Rising
           Row(
             children: [
-              Expanded(child: _buildBig3Card('Güneş', _natalChart!.sunSign, '☀️', Colors.orangeAccent)),
+              Expanded(child: _buildBig3Card(AppTranslations.get('sun'), _natalChart!.sunSign, '☀️', Colors.orangeAccent)),
               const SizedBox(width: 12),
-              Expanded(child: _buildBig3Card('Ay', _natalChart!.moonSign, '🌙', Colors.blueGrey)),
+              Expanded(child: _buildBig3Card(AppTranslations.get('moon'), _natalChart!.moonSign, '🌙', Colors.blueGrey)),
               const SizedBox(width: 12),
-              Expanded(child: _buildBig3Card('Yükselen', _natalChart!.risingSign, '⬆️', Colors.purpleAccent)),
+              Expanded(child: _buildBig3Card(AppTranslations.get('rising'), _natalChart!.risingSign, '⬆️', Colors.purpleAccent)),
             ],
           ),
           const SizedBox(height: 16),
           // Planets summary
           ExpansionTile(
-            title: const Text('Gezegen Pozisyonları', style: TextStyle(color: Colors.white70, fontSize: 13)),
+            title: Text(AppTranslations.get('planetPositions'), style: const TextStyle(color: Colors.white70, fontSize: 13)),
             tilePadding: EdgeInsets.zero,
             iconColor: Colors.white38,
             collapsedIconColor: Colors.white24,
@@ -989,15 +1074,15 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
             child: const Icon(Icons.wb_sunny_rounded, color: Colors.white, size: 36),
           ),
           const SizedBox(height: 20),
-          const Text(
-            'Günlük Kozmik Yönergen',
-            style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          Text(
+            AppTranslations.get('dailyCosmicGuidance'),
+            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Bugünün transit gezegenlerinin natal haritanla etkileşimini analiz et. 12 ev için kişiselleştirilmiş aksiyon önerileri al.',
+          Text(
+            AppTranslations.get('dailyGuidanceDesc'),
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white60, fontSize: 13, height: 1.5),
+            style: const TextStyle(color: Colors.white60, fontSize: 13, height: 1.5),
           ),
           const SizedBox(height: 24),
           SizedBox(
@@ -1012,12 +1097,12 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.auto_awesome, size: 20),
-                  SizedBox(width: 8),
-                  Text('GÜNLÜK YÖNERGEMİ AL', style: TextStyle(fontWeight: FontWeight.bold)),
-                  SizedBox(width: 8),
-                  Text('(15 🪙)', style: TextStyle(fontSize: 12)),
+                children: [
+                  const Icon(Icons.auto_awesome, size: 20),
+                  const SizedBox(width: 8),
+                  Text(AppTranslations.get('getMyDailyGuidance'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(width: 8),
+                  const Text('(15 🪙)', style: TextStyle(fontSize: 12)),
                 ],
               ),
             ),
@@ -1045,14 +1130,14 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
             backgroundColor: Colors.white10,
           ),
           const SizedBox(height: 24),
-          const Text(
-            'Kozmik Harita Analiz Ediliyor...',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          Text(
+            AppTranslations.get('cosmicChartAnalyzing'),
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Transit gezegenleri natal haritanla eşleştiriyorum',
-            style: TextStyle(color: Colors.white38, fontSize: 12),
+          Text(
+            AppTranslations.get('matchingPlanets'),
+            style: const TextStyle(color: Colors.white38, fontSize: 12),
           ),
         ],
       ),
@@ -1080,7 +1165,7 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'BUGÜNÜN ENERJİSİ',
+                        AppTranslations.get('todayEnergy'),
                         style: TextStyle(
                           color: Colors.cyanAccent.withOpacity(0.7),
                           fontSize: 10,
@@ -1137,7 +1222,7 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
                       const Icon(Icons.schedule, color: Colors.amberAccent, size: 18),
                       const SizedBox(width: 8),
                       Text(
-                        'Güç Saati: ${guidance.powerHour}',
+                        '${AppTranslations.get('powerHour')} ${guidance.powerHour}',
                         style: const TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.w600, fontSize: 13),
                       ),
                     ],
@@ -1176,9 +1261,9 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
           ),
         
         // Section title
-        const Text(
-          '12 EV YÖNERGELERİ',
-          style: TextStyle(
+        Text(
+          AppTranslations.get('houseGuidance'),
+          style: const TextStyle(
             color: Colors.white38,
             fontSize: 11,
             fontWeight: FontWeight.bold,
@@ -1228,15 +1313,15 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
             child: Row(
               children: [
                 Expanded(
-                  child: _buildLuckyElement('Şanslı Renk', guidance.luckyElements!.color, Icons.palette),
+                  child: _buildLuckyElement(AppTranslations.get('luckyColor'), guidance.luckyElements!.color, Icons.palette),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: _buildLuckyElement('Şanslı Sayı', '${guidance.luckyElements!.number}', Icons.tag),
+                  child: _buildLuckyElement(AppTranslations.get('luckyNumber'), '${guidance.luckyElements!.number}', Icons.tag),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: _buildLuckyElement('Yön', guidance.luckyElements!.direction, Icons.explore),
+                  child: _buildLuckyElement(AppTranslations.get('direction'), guidance.luckyElements!.direction, Icons.explore),
                 ),
               ],
             ),
@@ -1333,6 +1418,18 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
               guidance.shortAdvice,
               style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
             ),
+            const SizedBox(height: 8),
+            Text(
+              '• Bugün yap: ${guidance.shortAdvice}',
+              style: const TextStyle(color: Colors.greenAccent, fontSize: 12, height: 1.3),
+            ),
+            if (guidance.detailedAction != null && guidance.detailedAction!.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                '• Bugün kaçın: ${guidance.detailedAction!}',
+                style: const TextStyle(color: Colors.orangeAccent, fontSize: 12, height: 1.3),
+              ),
+            ],
             if (isExpanded && hasDetail) ...[
               const SizedBox(height: 14),
               Container(
@@ -1350,7 +1447,7 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
                         Icon(Icons.play_arrow, color: activationColor, size: 16),
                         const SizedBox(width: 6),
                         Text(
-                          'AKSİYON',
+                          AppTranslations.get('action'),
                           style: TextStyle(
                             color: activationColor,
                             fontSize: 10,
@@ -1412,10 +1509,10 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
           children: [
             const CircularProgressIndicator(color: Colors.cyanAccent),
             const SizedBox(height: 20),
-            const Text('Rüyan Analiz Ediliyor...', 
-              style: TextStyle(color: Colors.cyanAccent, fontSize: 13, letterSpacing: 1)),
+            Text(AppTranslations.get('dreamAnalyzing'), 
+              style: const TextStyle(color: Colors.cyanAccent, fontSize: 13, letterSpacing: 1)),
             const SizedBox(height: 8),
-            const Text('Gemini rüyanı dinliyor...', style: TextStyle(color: Colors.white30, fontSize: 11)),
+            Text(AppTranslations.get('geminiListeningDream'), style: const TextStyle(color: Colors.white30, fontSize: 11)),
           ],
         ),
       );
@@ -1429,8 +1526,8 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('RÜYA TABİRİ', 
-            style: TextStyle(color: Colors.white54, fontSize: 12, letterSpacing: 4, fontWeight: FontWeight.bold)),
+          Text(AppTranslations.get('dreamInterpretationTitle'), 
+            style: const TextStyle(color: Colors.white54, fontSize: 12, letterSpacing: 4, fontWeight: FontWeight.bold)),
           const SizedBox(height: 40),
           GestureDetector(
             onTap: _listen,
@@ -1462,7 +1559,7 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Text(
-              _isListening ? (_dreamText.isEmpty ? 'Dinliyorum...' : _dreamText) : 'Rüyanı anlatmak için dokun...',
+              _isListening ? (_dreamText.isEmpty ? AppTranslations.get('listening') : _dreamText) : AppTranslations.get('tapToTellDream'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: _isListening ? Colors.cyanAccent : Colors.white60,
@@ -1532,9 +1629,9 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
           // Analysis Tabs
           Row(
             children: [
-              _buildAnalysisTabItem(0, '🧠 BİLİNÇALTI', Colors.purpleAccent),
+              _buildAnalysisTabItem(0, '🧠 ${AppTranslations.get('subconscious')}', Colors.purpleAccent),
               const SizedBox(width: 12),
-              _buildAnalysisTabItem(1, '📜 TABİR', Colors.amberAccent),
+              _buildAnalysisTabItem(1, '📜 ${AppTranslations.get('interpretation')}', Colors.amberAccent),
             ],
           ),
           const SizedBox(height: 16),
@@ -1551,7 +1648,7 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
           // Reset Button
           TextButton(
             onPressed: () => setState(() => _dreamData = null),
-            child: const Text('YENİ RÜYA ANLAT', style: TextStyle(color: Colors.white24)),
+            child: Text(AppTranslations.get('newDream'), style: const TextStyle(color: Colors.white24)),
           ),
         ],
       ),
@@ -1599,9 +1696,9 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
           // Period Switcher
           Row(
             children: [
-              _buildSimpleTabItem(0, 'GÜNLÜK', Icons.today),
+              _buildSimpleTabItem(0, AppTranslations.get('daily'), Icons.today),
               const SizedBox(width: 12),
-              _buildSimpleTabItem(1, 'HAFTALIK', Icons.date_range),
+              _buildSimpleTabItem(1, AppTranslations.get('weekly'), Icons.date_range),
             ],
           ),
           const SizedBox(height: 25),
@@ -1612,14 +1709,14 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
                 padding: const EdgeInsets.symmetric(vertical: 40),
                 child: Column(
                   children: [
-                    const Text('Burç yorumları şu an hazırlanamadı. Lütfen bilgilerinizi kontrol edin ve tekrar deneyin.', 
+                    Text(AppTranslations.get('horoscopeUnavailable'), 
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white24)),
+                      style: const TextStyle(color: Colors.white24)),
                     const SizedBox(height: 20),
                     TextButton.icon(
                       onPressed: _loadHoroscopeData,
                       icon: const Icon(Icons.refresh, color: Colors.purpleAccent),
-                      label: const Text('YENİDEN DENE', style: TextStyle(color: Colors.purpleAccent, fontWeight: FontWeight.bold)),
+                      label: Text(AppTranslations.get('retry'), style: const TextStyle(color: Colors.purpleAccent, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
@@ -1628,7 +1725,7 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
           else ...[
             // Sun Sign Card
             _buildSignDetailCard(
-              title: 'GÜNEŞ BURCU',
+              title: AppTranslations.get('sunSign'),
               signName: currentData.sunSign,
               interpretation: currentData.sunInterpretation,
               icon: Icons.wb_sunny_rounded,
@@ -1638,7 +1735,7 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
 
             // Rising Sign Card
             _buildSignDetailCard(
-              title: 'YÜKSELEN BURCU',
+              title: AppTranslations.get('risingSign'),
               signName: currentData.risingSign,
               interpretation: currentData.risingInterpretation,
               icon: Icons.north_east_rounded,
@@ -1788,21 +1885,21 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
                 ),
               ),
               const SizedBox(width: 14),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Astroloji ve Rüya',
-                      style: TextStyle(
+                      AppTranslations.get('astrologyAndDreams'),
+                      style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 20,
                         color: Colors.white,
                       ),
                     ),
                     Text(
-                      'Yıldız ve Rüya Analizleri',
-                      style: TextStyle(
+                      AppTranslations.get('starAndDreamAnalysis'),
+                      style: const TextStyle(
                         color: Colors.white38,
                         fontSize: 11,
                         letterSpacing: 0.5,
@@ -1819,26 +1916,6 @@ class _AstrologyDreamRoomScreenState extends State<AstrologyDreamRoomScreen>
     );
   }
 
-  Widget _buildTabBar() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(15)),
-      child: TabBar(
-        controller: _tabController,
-        indicator: BoxDecoration(color: Colors.cyanAccent.withOpacity(0.2), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.cyanAccent)),
-        labelColor: Colors.cyanAccent,
-        unselectedLabelColor: Colors.white38,
-        dividerColor: Colors.transparent,
-        indicatorSize: TabBarIndicatorSize.tab,
-        tabs: _tabs.map((t) => Tab(text: t.label)).toList(),
-      ),
-    );
-  }
-
-  Widget _buildEmptyTab(String message) {
-    return Center(child: Text(message, style: const TextStyle(color: Colors.white38)));
-  }
 }
 
 class _GlassCard extends StatelessWidget {
@@ -1866,8 +1943,3 @@ class _GlassCard extends StatelessWidget {
   }
 }
 
-class _TabInfo {
-  final String label;
-  final IconData icon;
-  _TabInfo({required this.label, required this.icon});
-}

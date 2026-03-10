@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
+import '../../l10n/app_translations.dart';
 import 'tabs/mind_atelier_chat_tab.dart'; // Yeni oluşturulacak
 import 'tabs/mind_atelier_dna_tab.dart';  // Yeni oluşturulacak
 
@@ -13,9 +14,9 @@ class MindAtelierRoomScreen extends StatefulWidget {
 class _MindAtelierRoomScreenState extends State<MindAtelierRoomScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  final List<_TabInfo> _tabs = [
-    _TabInfo(label: 'Zihin Seansı', icon: Icons.psychology_outlined),
-    _TabInfo(label: 'Zihin DNA', icon: Icons.hub_outlined),
+  late final List<_TabInfo> _tabs = [
+    _TabInfo(label: AppTranslations.get('mindSession'), icon: Icons.psychology_outlined),
+    _TabInfo(label: AppTranslations.get('mindDNA'), icon: Icons.hub_outlined),
   ];
 
   @override
@@ -113,14 +114,14 @@ class _MindAtelierRoomScreenState extends State<MindAtelierRoomScreen> with Sing
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Persona Psikoloji',
+                      AppTranslations.get('personaPsychology'),
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: AppTheme.forestCharcoal,
                           ),
                     ),
                     Text(
-                      'Zihinsel denge ve derin öz-analiz',
+                      AppTranslations.get('mentalBalanceAnalysis'),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppTheme.mutedSage,
                             letterSpacing: 0.5,

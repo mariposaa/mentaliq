@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../config/app_locale.dart';
 import '../../config/app_theme.dart';
+import '../../l10n/app_translations.dart';
 import '../../models/forum_post.dart';
 import '../../services/auth_service.dart';
 import '../../services/forum_service.dart';
@@ -27,9 +28,9 @@ class CampfireFeedTab extends StatelessWidget {
               children: [
                 Icon(Icons.local_fire_department_rounded, size: 56, color: AppTheme.terracotta.withOpacity(0.5)),
                 const SizedBox(height: 12),
-                Text('Henüz paylaşım yok', style: TextStyle(fontSize: 15, color: AppTheme.mutedSage)),
+                Text(AppTranslations.get('noPostsYet'), style: TextStyle(fontSize: 15, color: AppTheme.mutedSage)),
                 const SizedBox(height: 4),
-                Text('İlk paylaşımı sen yap', style: TextStyle(fontSize: 13, color: AppTheme.mutedSage)),
+                Text(AppTranslations.get('makeFirstPost'), style: TextStyle(fontSize: 13, color: AppTheme.mutedSage)),
               ],
             ),
           );
@@ -186,7 +187,7 @@ class _PostCardState extends State<_PostCard> {
                   // Çevrildi göstergesi
                   if (needsTranslation && !_isTranslating) 
                     Tooltip(
-                      message: 'Çevrildi (${post.language.toUpperCase()})',
+                      message: AppTranslations.format('translatedTooltip', [post.language.toUpperCase()]),
                       child: Icon(Icons.translate, size: 10, color: AppTheme.mutedSage.withOpacity(0.7)),
                     ),
                 ],
@@ -209,7 +210,7 @@ class _PostCardState extends State<_PostCard> {
                   children: [
                     SizedBox(width: 10, height: 10, child: CircularProgressIndicator(strokeWidth: 1.5, color: AppTheme.mutedSage)),
                     const SizedBox(width: 6),
-                    Text('Çevriliyor...', style: TextStyle(fontSize: 11, color: AppTheme.mutedSage, fontStyle: FontStyle.italic)),
+                    Text(AppTranslations.get('translating'), style: TextStyle(fontSize: 11, color: AppTheme.mutedSage, fontStyle: FontStyle.italic)),
                   ],
                 )
               else

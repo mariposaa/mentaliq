@@ -1,11 +1,15 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/app_theme.dart';
 import '../../config/app_constants.dart';
 import '../../services/gemini_service.dart';
 import '../../services/token_service.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
-
+import '../../l10n/app_translations.dart';
 
 import 'package:audioplayers/audioplayers.dart';
 import '../../widgets/compassionate_background.dart';
@@ -38,12 +42,20 @@ class _ChatScreenState extends State<ChatScreen> {
   final stt.SpeechToText _speech = stt.SpeechToText();
   bool _isListening = false;
   String _speechText = '';
+  final TextEditingController _memoryController = TextEditingController();
+  List<_CompassionMemory> _compassionMemories = [];
+  String _selectedMood = 'uzgun';
+  static const String _compassionMemoriesKey = 'compassion_memories_v1';
+  static const int _memorySaveTokenCost = 5;
 
   @override
   void initState() {
     super.initState();
     _initializeChat();
     _initSpeech();
+    if (widget.category == 'duygusal_destek') {
+      _loadCompassionMemories();
+    }
   }
 
   void _initSpeech() async {
@@ -54,7 +66,10 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  void _listen() async {
+  void _listenToController(
+    TextEditingController controller, {
+    bool autoSendOnDone = false,
+  }) async {
     if (!_isListening) {
       final status = await Permission.microphone.request();
       if (status.isDenied) return;
@@ -65,7 +80,7 @@ class _ChatScreenState extends State<ChatScreen> {
           if (val == 'notListening' || val == 'done') {
             if (mounted && _isListening) {
               setState(() => _isListening = false);
-              if (_messageController.text.isNotEmpty) {
+              if (autoSendOnDone && controller.text.isNotEmpty) {
                 Future.delayed(const Duration(milliseconds: 500), () => _sendMessage());
               }
             }
@@ -83,7 +98,7 @@ class _ChatScreenState extends State<ChatScreen> {
           onResult: (val) => setState(() {
             _speechText = val.recognizedWords;
             if (val.recognizedWords.isNotEmpty) {
-              _messageController.text = val.recognizedWords;
+              controller.text = val.recognizedWords;
             }
           }),
         );
@@ -92,6 +107,14 @@ class _ChatScreenState extends State<ChatScreen> {
       _speech.stop();
       setState(() => _isListening = false);
     }
+  }
+
+  void _listenForChat() {
+    _listenToController(_messageController, autoSendOnDone: true);
+  }
+
+  void _listenForMemory() {
+    _listenToController(_memoryController);
   }
 
   Future<void> _initializeChat() async {
@@ -116,10 +139,10 @@ class _ChatScreenState extends State<ChatScreen> {
     final name = AppConstants.categoryNames[widget.category] ?? widget.category;
     
     if (widget.category == 'duygusal_destek') {
-       return 'Merhaba! 🌿\n\nBen $name alanında seninleyim.\n\n🔒 **GÜVENLİK NOTU:**\nBuradaki konuşmalarımız **kesinlikle kaydedilmemektedir**. Sadece sana daha iyi rehberlik edebilmem için zihin haritana (DNA) küçük notlar alınır.\n\nİçin rahat olsun, güvendesin. Neler hissediyorsun?';
+       return '${AppTranslations.get('welcomeGreeting')}\n\n${AppTranslations.format('welcomeMessage', [name])}\n\n${AppTranslations.get('securityNoteTitle')}\n${AppTranslations.get('securityNoteMessage')}\n\n${AppTranslations.get('securityNoteQuestion')}';
     }
 
-    return 'Merhaba! 🌿\n\nBen $name alanında sana yardımcı olmak için buradayım. Seni yargılamadan dinleyeceğim.\n\nBenimle ne paylaşmak istersin?';
+    return '${AppTranslations.get('welcomeGreeting')}\n\n${AppTranslations.format('welcomeGeneral', [name])}\n\n${AppTranslations.get('whatToShare')}';
   }
 
   void _sendMessage() async {
@@ -158,6 +181,71 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollToBottom();
   }
 
+  Future<void> _loadCompassionMemories() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_compassionMemoriesKey);
+    if (raw == null || raw.isEmpty) return;
+    try {
+      final decoded = json.decode(raw) as List<dynamic>;
+      setState(() {
+        _compassionMemories = decoded
+            .whereType<Map>()
+            .map((item) => _CompassionMemory.fromJson(Map<String, dynamic>.from(item)))
+            .toList()
+            .reversed
+            .toList();
+      });
+    } catch (_) {
+      setState(() => _compassionMemories = []);
+    }
+  }
+
+  Future<void> _saveCompassionMemories() async {
+    final prefs = await SharedPreferences.getInstance();
+    final encoded = json.encode(
+      _compassionMemories.reversed.map((item) => item.toJson()).toList(),
+    );
+    await prefs.setString(_compassionMemoriesKey, encoded);
+  }
+
+  Future<void> _saveMemoryEntry() async {
+    final content = _memoryController.text.trim();
+    if (content.isEmpty) return;
+
+    final hasTokens = await TokenService.useTokensForTest(_memorySaveTokenCost);
+    if (!hasTokens) {
+      _showInsufficientTokensDialog();
+      return;
+    }
+
+    final now = DateTime.now();
+    final shortNote = content.replaceAll(RegExp(r'\s+'), ' ');
+    final note = shortNote.length > 70 ? '${shortNote.substring(0, 70)}...' : shortNote;
+
+    setState(() {
+      _compassionMemories.insert(
+        0,
+        _CompassionMemory(
+          mood: _selectedMood,
+          note: note,
+          content: content,
+          createdAt: now,
+        ),
+      );
+      _memoryController.clear();
+    });
+
+    await _saveCompassionMemories();
+    final newBalance = await TokenService.getBalance();
+    if (mounted) {
+      setState(() => _tokenBalance = newBalance);
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Anı kaydedildi (-5 elmas).')),
+    );
+  }
+
 
   void _showInsufficientTokensDialog() {
     showDialog(
@@ -167,20 +255,20 @@ class _ChatScreenState extends State<ChatScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
         ),
-        title: const Row(
+        title: Row(
           children: [
-            Text('✨', style: TextStyle(fontSize: 24)),
-            SizedBox(width: 12),
-            Text('Token Yetersiz'),
+            const Text('✨', style: TextStyle(fontSize: 24)),
+            const SizedBox(width: 12),
+            Text(AppTranslations.get('insufficientTokens')),
           ],
         ),
         content: Text(
-          'Mesaj göndermek için yeterli tokenin yok.\n\nMevcut: $_tokenBalance\nGerekli: ${TokenService.messageTokenCost}',
+          '${AppTranslations.get('insufficientTokensMessage')}\n\n${AppTranslations.get('currentLabel')} $_tokenBalance\n${AppTranslations.get('requiredLabel')} ${TokenService.messageTokenCost}',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Tamam', style: TextStyle(color: AppTheme.sageGreen)),
+            child: Text(AppTranslations.get('ok'), style: TextStyle(color: AppTheme.sageGreen)),
           ),
         ],
       ),
@@ -202,6 +290,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void dispose() {
     _messageController.dispose();
+    _memoryController.dispose();
     _scrollController.dispose();
     _audioPlayer.dispose();
     GeminiService.clearSession();
@@ -243,36 +332,36 @@ class _ChatScreenState extends State<ChatScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Terapi Atmosferi',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.forestCharcoal),
+            Text(
+              AppTranslations.get('therapyAtmosphere'),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.forestCharcoal),
             ),
             const SizedBox(height: 20),
             
             // Tracks
             _buildAtmosphereOption(
-              'Yağmur Sesi', 
+              AppTranslations.get('rainSound'), 
               'rain-and-thunder-176105.mp3', 
               AtmosphereType.rain, 
               Icons.water_drop_outlined,
               Colors.blueGrey
             ),
             _buildAtmosphereOption(
-              'Orman Sesi', 
+              AppTranslations.get('forestSound'), 
               'night-forest-soundscape-158701.mp3', 
               AtmosphereType.fireflies, 
               Icons.forest_outlined,
               Colors.green
             ),
             _buildAtmosphereOption(
-              'Okyanus', 
+              AppTranslations.get('oceanSound'), 
               'soothing-ocean-waves-372489.mp3', 
               AtmosphereType.breath, 
               Icons.waves_rounded,
               Colors.blueAccent
             ),
             _buildAtmosphereOption(
-              'Melankolik Piyano', 
+              AppTranslations.get('melancholicPiano'), 
               'dark-crime-piano-drama-449252.mp3', 
               AtmosphereType.deep, 
               Icons.piano_rounded,
@@ -409,7 +498,7 @@ class _ChatScreenState extends State<ChatScreen> {
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                _isLoading ? 'Düşünüyor...' : 'Dinliyorum',
+                                _isLoading ? AppTranslations.get('thinking') : AppTranslations.get('listeningStatus'),
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                       color: (_currentAtmosphere != AtmosphereType.none && isCompassionateZone) 
                                           ? Colors.white70 
@@ -423,7 +512,6 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                     
                     // Atmosphere Toggle Button (Only for Compassionate Zone)
-                    if (isCompassionateZone)
                     if (isCompassionateZone)
                       GestureDetector(
                         onTap: _showAtmospherePanel,
@@ -443,7 +531,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                _isMusicPlaying ? 'Atmosfer Açık' : 'Atmosferi Değiştir',
+                                _isMusicPlaying ? AppTranslations.get('atmosphereOn') : AppTranslations.get('changeAtmosphere'),
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
@@ -488,110 +576,354 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               ),
 
-            // Messages
-            Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                itemCount: _messages.length + (_isLoading ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (_isLoading && index == _messages.length) {
-                    return _buildTypingIndicator();
-                  }
-                  return _buildMessageBubble(_messages[index]);
-                },
-              ),
-            ),
-
-            // Input Area
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-              decoration: BoxDecoration(
-                color: AppTheme.warmCream,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 10,
-                    offset: const Offset(0, -4),
+            if (isCompassionateZone) ...[
+              Expanded(
+                child: Container(
+                  margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  decoration: BoxDecoration(
+                    color: AppTheme.warmCream,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppTheme.softBorder),
                   ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      style: Theme.of(context).textTheme.bodyLarge,
-                      maxLines: null,
-                      keyboardType: TextInputType.multiline,
-                      decoration: InputDecoration(
-                        hintText: 'Ne düşünüyorsun?',
-                        hintStyle: TextStyle(color: AppTheme.mutedSage),
-                        filled: true,
-                        fillColor: AppTheme.sandBeige,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                          borderSide: BorderSide.none,
+                  child: DefaultTabController(
+                    length: 3,
+                    child: Column(
+                      children: [
+                        const TabBar(
+                          labelColor: AppTheme.sageGreen,
+                          unselectedLabelColor: AppTheme.mutedSage,
+                          indicatorColor: AppTheme.sageGreen,
+                          tabs: [
+                            Tab(text: 'İçini Dök'),
+                            Tab(text: 'Anı Yaz'),
+                            Tab(text: 'Anılar'),
+                          ],
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                      ),
-                      onSubmitted: (_) => _sendMessage(),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: _listen,
-                    child: Container(
-                      height: 52,
-                      width: 52,
-                      decoration: BoxDecoration(
-                        color: _isListening ? AppTheme.terracotta : AppTheme.sageGreen.withOpacity(0.12),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: (_isListening ? AppTheme.terracotta : AppTheme.sageGreen).withOpacity(0.2),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
+                        Expanded(
+                          child: TabBarView(
+                            children: [
+                              _buildChatTab(),
+                              _buildMemoryComposerTab(),
+                              _buildMemoriesTab(),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: Icon(
-                        _isListening ? Icons.stop_rounded : Icons.mic_rounded,
-                        color: _isListening ? Colors.white : AppTheme.sageGreen,
-                        size: 24,
-                      ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: _sendMessage,
-                    child: Container(
-                      height: 52,
-                      width: 52,
-                      decoration: BoxDecoration(
-                        color: AppTheme.terracotta,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.terracotta.withOpacity(0.35),
-                            blurRadius: 16,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(Icons.send_rounded, color: Colors.white, size: 22),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
+            ] else ...[
+              _buildMessagesList(),
+              _buildChatInput(),
+            ],
           ],
         ),
       ),
     ),
   );
 }
+
+  Widget _buildChatTab() {
+    return Column(
+      children: [
+        _buildMessagesList(),
+        _buildChatInput(),
+      ],
+    );
+  }
+
+  Widget _buildMessagesList() {
+    return Expanded(
+      child: ListView.builder(
+        controller: _scrollController,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        itemCount: _messages.length + (_isLoading ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (_isLoading && index == _messages.length) {
+            return _buildTypingIndicator();
+          }
+          return _buildMessageBubble(_messages[index]);
+        },
+      ),
+    );
+  }
+
+  Widget _buildChatInput() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+      decoration: BoxDecoration(
+        color: AppTheme.warmCream,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _messageController,
+              style: Theme.of(context).textTheme.bodyLarge,
+              maxLines: null,
+              keyboardType: TextInputType.multiline,
+              decoration: InputDecoration(
+                hintText: AppTranslations.get('whatAreYouThinking'),
+                hintStyle: TextStyle(color: AppTheme.mutedSage),
+                filled: true,
+                fillColor: AppTheme.sandBeige,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+              ),
+              onSubmitted: (_) => _sendMessage(),
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: _listenForChat,
+            child: Container(
+              height: 52,
+              width: 52,
+              decoration: BoxDecoration(
+                color: _isListening ? AppTheme.terracotta : AppTheme.sageGreen.withOpacity(0.12),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: (_isListening ? AppTheme.terracotta : AppTheme.sageGreen).withOpacity(0.2),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Icon(
+                _isListening ? Icons.stop_rounded : Icons.mic_rounded,
+                color: _isListening ? Colors.white : AppTheme.sageGreen,
+                size: 24,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: _sendMessage,
+            child: Container(
+              height: 52,
+              width: 52,
+              decoration: BoxDecoration(
+                color: AppTheme.terracotta,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.terracotta.withOpacity(0.35),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.send_rounded, color: Colors.white, size: 22),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMemoryComposerTab() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+      child: Column(
+        children: [
+          TextField(
+            controller: _memoryController,
+            maxLines: 7,
+            decoration: InputDecoration(
+              hintText: 'Anını yaz veya mikrofonla konuş...',
+              filled: true,
+              fillColor: AppTheme.sandBeige,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: _moodOptions.map((mood) {
+                      final selected = mood['id'] == _selectedMood;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text('${mood['emoji']} ${mood['label']}'),
+                          selected: selected,
+                          onSelected: (_) => setState(() => _selectedMood = mood['id']!),
+                          selectedColor: AppTheme.sageGreen.withOpacity(0.2),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _listenForMemory,
+                  icon: Icon(_isListening ? Icons.stop_rounded : Icons.mic_rounded),
+                  label: Text(_isListening ? 'Durdur' : 'Sesle Yaz'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _saveMemoryEntry,
+                  icon: const Icon(Icons.bookmark_add_rounded),
+                  label: const Text('Anıyı Kaydet'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMemoriesTab() {
+    if (_compassionMemories.isEmpty) {
+      return const Center(
+        child: Text('Henüz kayıtlı anı yok.'),
+      );
+    }
+
+    return GridView.builder(
+      padding: const EdgeInsets.all(12),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: 0.95,
+      ),
+      itemCount: _compassionMemories.length,
+      itemBuilder: (context, index) {
+        final item = _compassionMemories[index];
+        return GestureDetector(
+          onTap: () => _showMemoryDetails(item),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.warmCream,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppTheme.softBorder),
+              boxShadow: AppTheme.cardShadow,
+            ),
+            child: Column(
+              children: [
+                Expanded(
+                  child: Center(
+                    child: SvgPicture.asset(
+                      _moodCatAsset(item.mood),
+                      width: 120,
+                      height: 120,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+                Text(
+                  _formatDateTime(item.createdAt),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: AppTheme.forestCharcoal,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  static const List<Map<String, String>> _moodOptions = [
+    {'id': 'uzgun', 'label': 'Üzgün', 'emoji': '😿'},
+    {'id': 'neseli', 'label': 'Neşeli', 'emoji': '😺'},
+    {'id': 'kaygili', 'label': 'Kaygılı', 'emoji': '😾'},
+    {'id': 'sakin', 'label': 'Sakin', 'emoji': '😸'},
+  ];
+
+  String _moodLabel(String moodId) {
+    final mood = _moodOptions.firstWhere(
+      (item) => item['id'] == moodId,
+      orElse: () => _moodOptions.first,
+    );
+    return mood['label']!;
+  }
+
+  String _moodCatAsset(String moodId) {
+    switch (moodId) {
+      case 'uzgun':
+        return 'assets/images/cats/uzgun.svg';
+      case 'neseli':
+        return 'assets/images/cats/neseli.svg';
+      case 'kaygili':
+        return 'assets/images/cats/kaygili.svg';
+      case 'sakin':
+        return 'assets/images/cats/sakin.svg';
+      default:
+        return 'assets/images/cats/sakin.svg';
+    }
+  }
+
+  String _formatDateTime(DateTime dt) {
+    final day = dt.day.toString().padLeft(2, '0');
+    final month = dt.month.toString().padLeft(2, '0');
+    final year = dt.year.toString();
+    final hour = dt.hour.toString().padLeft(2, '0');
+    final minute = dt.minute.toString().padLeft(2, '0');
+    return '$day.$month.$year $hour:$minute';
+  }
+
+  void _showMemoryDetails(_CompassionMemory item) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.warmCream,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        ),
+        title: Text('${_moodLabel(item.mood)} • ${_formatDateTime(item.createdAt)}'),
+        content: SingleChildScrollView(
+          child: Text(
+            item.content,
+            style: const TextStyle(
+              color: AppTheme.forestCharcoal,
+              height: 1.4,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Kapat'),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildMessageBubble(_ChatMessage message) {
     return Padding(
@@ -693,4 +1025,36 @@ class _ChatMessage {
   final bool isUser;
 
   _ChatMessage({required this.content, required this.isUser});
+}
+
+class _CompassionMemory {
+  final String mood;
+  final String note;
+  final String content;
+  final DateTime createdAt;
+
+  const _CompassionMemory({
+    required this.mood,
+    required this.note,
+    required this.content,
+    required this.createdAt,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'mood': mood,
+      'note': note,
+      'content': content,
+      'createdAt': createdAt.toIso8601String(),
+    };
+  }
+
+  factory _CompassionMemory.fromJson(Map<String, dynamic> json) {
+    return _CompassionMemory(
+      mood: (json['mood'] ?? 'uzgun').toString(),
+      note: (json['note'] ?? '').toString(),
+      content: (json['content'] ?? '').toString(),
+      createdAt: DateTime.tryParse((json['createdAt'] ?? '').toString()) ?? DateTime.now(),
+    );
+  }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
+import '../../../l10n/app_translations.dart';
 import '../../../services/user_dna_service.dart';
 import '../../../models/user_dna_model.dart';
 
@@ -62,7 +63,7 @@ class _MindAtelierDNATabState extends State<MindAtelierDNATab> {
 
             // GÜÇLÜ YÖNLER (STRENGTHS)
             if (_dna?.strengths?.isNotEmpty ?? false) ...[
-              _buildSectionTitle('Süper Güçleriniz', Icons.flash_on_rounded, AppTheme.terracotta),
+              _buildSectionTitle(AppTranslations.get('superpowers'), Icons.flash_on_rounded, AppTheme.terracotta),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
@@ -91,13 +92,13 @@ class _MindAtelierDNATabState extends State<MindAtelierDNATab> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(
+                    Row(
                       children: [
-                        Icon(Icons.psychology_alt_rounded, color: Colors.white70),
-                        SizedBox(width: 10),
+                        const Icon(Icons.psychology_alt_rounded, color: Colors.white70),
+                        const SizedBox(width: 10),
                         Text(
-                          'Gölge Yan & Tetikleyiciler',
-                          style: TextStyle(
+                          AppTranslations.get('shadowTriggers'),
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -106,16 +107,16 @@ class _MindAtelierDNATabState extends State<MindAtelierDNATab> {
                         ),
                       ],
                     ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 10),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
                       child: Text(
-                        'Gerçek değişim, karanlıkla yüzleşince başlar. İşte seni yöneten gizli kodlar:',
-                        style: TextStyle(color: Colors.white60, fontSize: 12),
+                        AppTranslations.get('shadowDesc'),
+                        style: const TextStyle(color: Colors.white60, fontSize: 12),
                       ),
                     ),
                     
                     if (_dna?.fears?.isNotEmpty ?? false) ...[
-                      const Text('KORKULAR', style: TextStyle(color: AppTheme.terracotta, fontSize: 11, fontWeight: FontWeight.bold)),
+                      Text(AppTranslations.get('fears'), style: const TextStyle(color: AppTheme.terracotta, fontSize: 11, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 8,
@@ -126,7 +127,7 @@ class _MindAtelierDNATabState extends State<MindAtelierDNATab> {
                     ],
 
                     if (_dna?.triggers?.isNotEmpty ?? false) ...[
-                      const Text('TETİKLEYİCİLER', style: TextStyle(color: AppTheme.terracotta, fontSize: 11, fontWeight: FontWeight.bold)),
+                      Text(AppTranslations.get('triggers'), style: const TextStyle(color: AppTheme.terracotta, fontSize: 11, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       
                       Wrap(
@@ -146,7 +147,7 @@ class _MindAtelierDNATabState extends State<MindAtelierDNATab> {
                 child: Padding(
                   padding: const EdgeInsets.all(40),
                   child: Text(
-                    'Analiz almak için Persona Seansı başlatın.',
+                    AppTranslations.get('startSessionForAnalysis'),
                     style: TextStyle(color: AppTheme.mutedSage, fontSize: 12),
                   ),
                 ),
@@ -177,7 +178,7 @@ class _MindAtelierDNATabState extends State<MindAtelierDNATab> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  hasData ? 'Persona DNA\'nız Hazır' : 'Persona DNA\'nız İşleniyor',
+                  hasData ? AppTranslations.get('personaDnaReady') : AppTranslations.get('personaDnaProcessing'),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: AppTheme.forestCharcoal,
@@ -185,8 +186,8 @@ class _MindAtelierDNATabState extends State<MindAtelierDNATab> {
                 ),
                 Text(
                   hasData 
-                    ? 'Karakter haritanız son seansınıza göre güncellendi.'
-                    : 'Sohbet ettikçe karakter haritanız burada şekillenecek.',
+                    ? AppTranslations.get('dnaUpdatedDesc')
+                    : AppTranslations.get('dnaFormingDesc'),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppTheme.mutedSage,
                       ),
@@ -211,7 +212,7 @@ class _MindAtelierDNATabState extends State<MindAtelierDNATab> {
       child: Column(
         children: [
           Text(
-            mbti ?? 'Henüz Bir Arketip Belirlenmedi',
+            mbti ?? AppTranslations.get('noArchetypeYet'),
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -245,11 +246,11 @@ class _MindAtelierDNATabState extends State<MindAtelierDNATab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 4, bottom: 12),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
           child: Text(
-            'Baskın Özellikler',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            AppTranslations.get('dominantTraits'),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
         ),
         ...traits.map((t) => _buildTraitTag(t)),
@@ -280,11 +281,11 @@ class _MindAtelierDNATabState extends State<MindAtelierDNATab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 4, bottom: 12),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
           child: Text(
-            'Temel Değerler',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            AppTranslations.get('coreValues'),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
         ),
         Wrap(

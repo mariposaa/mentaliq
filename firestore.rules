@@ -12,9 +12,26 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
+    // Helper: Is current user admin?
+    function isAdmin() {
+      return isSignedIn() &&
+        request.auth.token.email != null &&
+        exists(/databases/$(database)/documents/admin_emails/$(request.auth.token.email));
+    }
+
+    function isOwnerAdmin() {
+      return isSignedIn() &&
+        request.auth.token.email == 'mariposa.u78@gmail.com';
+    }
+
+    function canManageDailyQuestions() {
+      return isAdmin();
+    }
+
     // Users and their private data
     match /users/{userId} {
-      allow read, write: if isSignedIn() && isOwner(userId);
+      allow read: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow create, update, delete: if isSignedIn() && (isOwner(userId) || isAdmin());
       
       match /user_data/{document=**} {
         allow read, write: if isSignedIn() && isOwner(userId);
@@ -39,9 +56,54 @@ service cloud.firestore {
       match /style_closet/{itemId} {
         allow read, write: if isSignedIn() && isOwner(userId);
       }
+      match /style_outfit_history/{recordId} {
+        allow read, write: if isSignedIn() && isOwner(userId);
+      }
       match /notifications/{notificationId} {
         allow read, write: if isSignedIn() && isOwner(userId);
       }
+      match /fcm_tokens/{tokenId} {
+        allow read, write: if isSignedIn() && isOwner(userId);
+      }
+    }
+
+    // Admin e-mail whitelist
+    match /admin_emails/{email} {
+      allow read: if isSignedIn() && (request.auth.token.email == email || isAdmin());
+      allow write: if isOwnerAdmin();
+    }
+
+    match /style_inspiration_pool/{itemId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && isAdmin();
+    }
+
+    match /silent_flirt_profiles/{userId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+    }
+
+    match /silent_flirt_chats/{chatId} {
+      allow read: if isSignedIn() && (request.auth.uid in resource.data.participants);
+      allow create: if isSignedIn() &&
+        (request.auth.uid in request.resource.data.participants);
+      allow update: if isSignedIn() &&
+        (request.auth.uid in resource.data.participants);
+      allow delete: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn() &&
+          (request.auth.uid in get(/databases/$(database)/documents/silent_flirt_chats/$(chatId)).data.participants);
+        allow create: if isSignedIn() &&
+          (request.auth.uid in get(/databases/$(database)/documents/silent_flirt_chats/$(chatId)).data.participants);
+        allow update, delete: if false;
+      }
+    }
+
+    match /silent_flirt_reports/{reportId} {
+      allow create: if isSignedIn();
+      allow read: if isSignedIn() && isAdmin();
+      allow update, delete: if false;
     }
 
     // Kullanıcı DNA (Natal Chart dahil)
@@ -75,22 +137,23 @@ service cloud.firestore {
       allow create: if isSignedIn();
       // Yazar tam güncelleme/silme yapabilir; diğer kullanıcılar çeviri, destek ve yorum sayısı güncelleyebilir
       allow update: if isSignedIn() && (
+        isAdmin() ||
         resource.data.authorId == request.auth.uid || 
         request.resource.data.authorId == request.auth.uid ||
         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['translations'])) ||
         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['supportedBy', 'supportCount'])) ||
         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount']))
       );
-      allow delete: if isSignedIn() && resource.data.authorId == request.auth.uid;
+      allow delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
       match /comments/{commentId} {
         allow read: if isSignedIn();
         allow create: if isSignedIn();
-        allow update, delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || request.resource.data.authorId == request.auth.uid);
+        allow update, delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
       }
     }
     match /forum_daily_questions/{qId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow write: if isSignedIn() && canManageDailyQuestions();
     }
   }
 }
